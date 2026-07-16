@@ -1,0 +1,110 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  STAFF
+  CUSTOMER
+  WAREHOUSE_OPERATOR
+}
+
+enum ReservationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ACTIVE
+  RETURNED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum InventoryAction {
+  RECEIVE
+  RELEASE
+  DAMAGE_RECORDED
+  MAINTENANCE
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String
+  name          String
+  role          Role           @default(CUSTOMER)
+  reservations  Reservation[]
+  inventoryLogs InventoryLog[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Product {
+  id               String            @id @default(uuid())
+  name             String
+  sku              String            @unique
+  description      String?
+  pricePerDay      Decimal
+  totalStock       Int
+  reservationItems ReservationItem[]
+  inventoryLogs    InventoryLog[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model Reservation {
+  id         String            @id @default(uuid())
+  userId     String
+  user       User              @relation(fields: [userId], references: [id])
+  status     ReservationStatus @default(PENDING)
+  startDate  DateTime
+  endDate    DateTime
+  totalPrice Decimal
+  items      ReservationItem[]
+  payments   Payment[]
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+}
+
+model ReservationItem {
+  id            String      @id @default(uuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id])
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id])
+  quantity      Int
+  unitPrice     Decimal
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  reservationId String
+  reservation   Reservation   @relation(fields: [reservationId], references: [id])
+  amount        Decimal
+  status        PaymentStatus @default(PENDING)
+  transactionId String?
+  createdAt     DateTime      @default(now())
+}
+
+model InventoryLog {
+  id         String          @id @default(uuid())
+  productId  String
+  product    Product         @relation(fields: [productId], references: [id])
+  operatorId String
+  operator   User            @relation(fields: [operatorId], references: [id])
+  action     InventoryAction
+  quantity   Int
+  notes      String?
+  timestamp  DateTime        @default(now())
+}
