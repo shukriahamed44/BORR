@@ -1,0 +1,183 @@
+{
+	"info": {
+		"_postman_id": "ammunation-erp-payments-subcollection",
+		"name": "AmmuNation ERP - Payments Domain Module",
+		"description": "Postman Collection v2.1 for Mock Payment Processing and Refund endpoints.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "reservationId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "paymentId",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Process Payment (PAID)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = pm.response.json();",
+							"if (jsonData.payment && jsonData.payment.id) {",
+							"    pm.collectionVariables.set('paymentId', jsonData.payment.id);",
+							"    console.log('PaymentId auto-saved:', jsonData.payment.id);",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{accessToken}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"reservationId\": \"{{reservationId}}\",\n  \"amount\": 903.00,\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"simulateFailure\": false\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/payments/process",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"payments",
+						"process"
+					]
+				}
+			}
+		},
+		{
+			"name": "2. Simulate Payment Failure (FAILED)",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{accessToken}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"reservationId\": \"{{reservationId}}\",\n  \"amount\": 903.00,\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"simulateFailure\": true\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/payments/process",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"payments",
+						"process"
+					]
+				}
+			}
+		},
+		{
+			"name": "3. Refund Payment (STAFF or ADMIN only)",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{accessToken}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"paymentId\": \"{{paymentId}}\",\n  \"reason\": \"Customer requested cancellation prior to equipment checkout.\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/payments/refund",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"payments",
+						"refund"
+					]
+				}
+			}
+		},
+		{
+			"name": "4. Get Reservation Payments",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{accessToken}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/payments/reservation/{{reservationId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"payments",
+						"reservation",
+						"{{reservationId}}"
+					]
+				}
+			}
+		}
+	]
+}

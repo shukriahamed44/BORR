@@ -1,0 +1,94 @@
+{
+	"info": {
+		"_postman_id": "ammunation-erp-notifications-subcollection",
+		"name": "AmmuNation ERP - Notifications Queue Domain Module",
+		"description": "Postman Collection v2.1 for Async Redis BullMQ Notification Queue endpoints.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Trigger Async Email Queue Job",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{accessToken}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"to\": \"alex.customer@ammunation.com\",\n  \"subject\": \"AmmuNation Reservation Approved\",\n  \"body\": \"Your equipment reservation #102 has been approved for pickup.\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/notifications/test-email",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"notifications",
+						"test-email"
+					]
+				}
+			}
+		},
+		{
+			"name": "2. Trigger Async Mobile Push Queue Job",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{accessToken}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"deviceToken\": \"fcm_token_device_99018\",\n  \"title\": \"Equipment Return Alert\",\n  \"message\": \"Tactical Recon Drone Mark IV is due for return by 6:00 PM today.\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/notifications/test-push",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"notifications",
+						"test-push"
+					]
+				}
+			}
+		}
+	]
+}
