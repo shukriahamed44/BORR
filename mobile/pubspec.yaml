@@ -1,0 +1,63 @@
+##
+## FORMAL ARCHITECTURAL DESCRIPTION:
+## Flutter Mobile Application Dependency Manifest (pubspec.yaml).
+## Declares all packages required for JWT secure storage, HTTP client with interceptors,
+## role-based navigation, QR scanner, local notifications, and premium UI components.
+##
+## IN SIMPLE WORDS:
+## The package list for the AmmuNation mobile app — tells Flutter what libraries to install.
+##
+
+name: ammunation_mobile
+description: AmmuNation ERP — Flutter Mobile Application for Customers and Staff.
+version: 1.0.0+1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ─── HTTP & Networking ─────────────────────────────────────────────────────
+  dio: ^5.7.0                          # HTTP client with interceptors
+  pretty_dio_logger: ^1.4.0            # Debug-friendly request/response logging
+
+  # ─── Secure Storage ────────────────────────────────────────────────────────
+  flutter_secure_storage: ^9.2.2       # Encrypted token storage (Keychain/Keystore)
+
+  # ─── State Management ──────────────────────────────────────────────────────
+  provider: ^6.1.2                     # Lightweight ChangeNotifier state management
+
+  # ─── Navigation ────────────────────────────────────────────────────────────
+  go_router: ^14.6.1                   # Declarative role-aware routing
+
+  # ─── UI & Design ───────────────────────────────────────────────────────────
+  google_fonts: ^6.2.1                 # Premium typography (Inter font)
+  flutter_animate: ^4.5.0             # Micro-animations and transitions
+  cached_network_image: ^3.4.1        # Efficient image loading & caching
+  shimmer: ^3.0.0                      # Loading skeleton placeholders
+
+  # ─── QR Code ───────────────────────────────────────────────────────────────
+  mobile_scanner: ^5.2.3              # Camera-based QR/barcode scanner
+  qr_flutter: ^4.1.0                  # QR code image generator
+
+  # ─── Notifications ─────────────────────────────────────────────────────────
+  flutter_local_notifications: ^17.2.4 # In-app local push notification banners
+
+  # ─── Utilities ─────────────────────────────────────────────────────────────
+  intl: ^0.19.0                        # Date/time formatting
+  equatable: ^2.0.5                    # Value equality for models
+  shared_preferences: ^2.3.3          # Light key-value storage for preferences
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
