@@ -38,26 +38,54 @@ void main() async {
   runApp(const AmmuNationApp());
 }
 
-class AmmuNationApp extends StatelessWidget {
+class AmmuNationApp extends StatefulWidget {
   const AmmuNationApp({super.key});
+
+  @override
+  State<AmmuNationApp> createState() => _AmmuNationAppState();
+}
+
+class _AmmuNationAppState extends State<AmmuNationApp> {
+  final _auth = AuthProvider();
+  final _notifications = NotificationProvider();
+  late final _router = AppRouter.createRouter(_auth);
+
+  @override
+  void initState() {
+    super.initState();
+    // The router listens to _auth itself — it must be built once, not rebuilt on
+    // every auth change, or the navigation stack resets under the user.
+    _auth.addListener(_onAuthChanged);
+  }
+
+  void _onAuthChanged() {
+    if (_auth.isAuthenticated) {
+      _notifications.startPolling();
+    } else {
+      _notifications.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _auth.removeListener(_onAuthChanged);
+    _auth.dispose();
+    _notifications.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider.value(value: _auth),
+        ChangeNotifierProvider.value(value: _notifications),
       ],
-      child: Consumer<AuthProvider>(
-        builder: (context, auth, _) {
-          final router = AppRouter.createRouter(auth);
-          return MaterialApp.router(
-            title: 'AmmuNation ERP',
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.darkTheme,
-            routerConfig: router,
-          );
-        },
+      child: MaterialApp.router(
+        title: 'AmmuNation ERP',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.darkTheme,
+        routerConfig: _router,
       ),
     );
   }

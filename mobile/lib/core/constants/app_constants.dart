@@ -35,11 +35,37 @@ class AppConstants {
   static const String routeQrScanner = '/qr-scanner';
 
   // ─── Reservation Status Labels ───────────────────────────────────────────
+  // Keys must match the backend `ReservationStatus` Prisma enum exactly.
   static const Map<String, String> statusLabels = {
     'PENDING': 'Pending',
-    'CONFIRMED': 'Confirmed',
+    'APPROVED': 'Approved',
+    'REJECTED': 'Rejected',
     'ACTIVE': 'Active',
-    'COMPLETED': 'Completed',
+    'RETURNED': 'Returned',
     'CANCELLED': 'Cancelled',
   };
+
+  static const List<String> reservationStatuses = [
+    'PENDING',
+    'APPROVED',
+    'REJECTED',
+    'ACTIVE',
+    'RETURNED',
+    'CANCELLED',
+  ];
+
+  /// Mirrors the backend reservation state machine
+  /// (`ReservationsService.validateStatusTransition`) so the UI never offers a
+  /// move the API will reject with a 400. RETURNED/REJECTED/CANCELLED are terminal.
+  static const Map<String, List<String>> allowedTransitions = {
+    'PENDING': ['APPROVED', 'REJECTED', 'CANCELLED'],
+    'APPROVED': ['ACTIVE', 'CANCELLED'],
+    'ACTIVE': ['RETURNED'],
+    'RETURNED': <String>[],
+    'REJECTED': <String>[],
+    'CANCELLED': <String>[],
+  };
+
+  static List<String> nextStatuses(String current) =>
+      allowedTransitions[current] ?? const [];
 }

@@ -41,7 +41,24 @@ class ApiService {
           }
           handler.next(options);
         },
-        onError: (error, handler) {
+        onError: (error, handler) async {
+          // Access token expired → swap it for a fresh one and replay the request once.
+          // `_retried` stops a still-401 replay from refreshing in a loop.
+          if (error.response?.statusCode == 401 &&
+              error.requestOptions.extra['_retried'] != true &&
+              !error.requestOptions.path.startsWith('/auth/')) {
+            if (await _refreshToken()) {
+              try {
+                final retry = await _retry(error.requestOptions);
+                return handler.resolve(retry);
+              } catch (_) {
+                // fall through to the normal rejection below
+              }
+            } else {
+              onSessionExpired?.call();
+            }
+          }
+
           final message = _parseError(error);
           handler.reject(
             DioException(
@@ -66,6 +83,35 @@ class ApiService {
         compact: true,
       ),
     );
+  }
+
+  /// Called when the refresh token itself is dead — AuthProvider hooks this up to log out.
+  void Function()? onSessionExpired;
+
+  /// Exchanges the stored refresh token for a new access token.
+  /// Uses a bare Dio so the auth/error interceptors above cannot recurse.
+  Future<bool> _refreshToken() async {
+    final refreshToken = await SecureStorageService.getRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) return false;
+
+    try {
+      final res = await Dio(BaseOptions(baseUrl: AppConstants.apiBaseUrl))
+          .post('/auth/refresh', data: {'refreshToken': refreshToken});
+      await SecureStorageService.saveTokens(
+        accessToken: res.data['accessToken'] as String,
+        refreshToken: res.data['refreshToken'] as String,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<Response> _retry(RequestOptions options) async {
+    final token = await SecureStorageService.getAccessToken();
+    options.headers['Authorization'] = 'Bearer $token';
+    options.extra['_retried'] = true;
+    return _dio.fetch(options);
   }
 
   // ─── HTTP Methods ─────────────────────────────────────────────────────────
