@@ -10,7 +10,6 @@
  * based on your role, and blocks you from accessing pages you shouldn't.
  */
 
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/screens/login_screen.dart';
@@ -114,7 +113,7 @@ class AppRouter {
             ),
             GoRoute(
               path: '/staff/notifications',
-              builder: (_, __) => const NotificationsScreen(isStaff: true),
+              builder: (_, __) => const NotificationsScreen(),
             ),
           ],
         ),
