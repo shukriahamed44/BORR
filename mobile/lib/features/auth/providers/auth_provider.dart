@@ -34,6 +34,11 @@ class AuthProvider extends ChangeNotifier {
       _user?.role == 'ADMIN' ||
       _user?.role == 'WAREHOUSE_OPERATOR';
 
+  AuthProvider() {
+    // When the refresh token is dead too, drop the session and bounce to login.
+    apiService.onSessionExpired = logout;
+  }
+
   // ─── Restore Session on App Start ─────────────────────────────────────────
 
   Future<void> tryRestoreSession() async {

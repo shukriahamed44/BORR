@@ -34,6 +34,23 @@ class AppTheme {
   static const Color borderSubtle = Color(0xFF1E2A3A);
   static const Color borderMedium = Color(0xFF263344);
 
+  /// Single source of truth for reservation status colours (customer + staff screens).
+  static Color statusColor(String status) {
+    switch (status) {
+      case 'APPROVED':
+        return accent;
+      case 'ACTIVE':
+        return primary;
+      case 'RETURNED':
+        return textMuted;
+      case 'REJECTED':
+      case 'CANCELLED':
+        return danger;
+      default: // PENDING
+        return warning;
+    }
+  }
+
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
