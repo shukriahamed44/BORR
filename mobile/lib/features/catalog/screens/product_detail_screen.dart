@@ -97,10 +97,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           // ─── Name & Category ─────────────────────────────────────────
           Text(p.name, style: Theme.of(context).textTheme.headlineSmall)
               .animate(delay: 100.ms).fadeIn().slideX(begin: -0.05, end: 0),
-          if (p.category != null) ...[
+          if (p.categoryName != null) ...[
             const SizedBox(height: 6),
             Chip(
-              label: Text(p.category!),
+              label: Text(p.categoryName!),
               backgroundColor: AppTheme.primary.withOpacity(0.15),
               labelStyle: const TextStyle(color: AppTheme.primaryLight, fontSize: 12),
             ),
@@ -114,18 +114,38 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               _StatCard(
                 icon: Icons.attach_money_rounded,
                 label: 'Daily Rate',
-                value: '\$${p.dailyRate.toStringAsFixed(2)}',
+                value: '\$${p.pricePerDay.toStringAsFixed(2)}',
                 color: AppTheme.accent,
               ),
               const SizedBox(width: 12),
               _StatCard(
                 icon: Icons.inventory_2_rounded,
                 label: 'Available',
-                value: '${p.stockQuantity} units',
+                value: '${p.totalStock} units',
                 color: p.inStock ? AppTheme.accent : AppTheme.danger,
               ),
             ],
           ).animate(delay: 200.ms).fadeIn().slideY(begin: 0.1, end: 0),
+
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              _StatCard(
+                icon: Icons.account_balance_wallet_rounded,
+                label: 'Refundable Deposit',
+                value: '\$${p.deposit.toStringAsFixed(2)}',
+                color: AppTheme.warning,
+              ),
+              const SizedBox(width: 12),
+              _StatCard(
+                icon: Icons.qr_code_2_rounded,
+                label: 'SKU',
+                value: p.sku.isEmpty ? '—' : p.sku,
+                color: AppTheme.textSecondary,
+              ),
+            ],
+          ).animate(delay: 250.ms).fadeIn().slideY(begin: 0.1, end: 0),
 
           const SizedBox(height: 20),
 
@@ -134,6 +154,41 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           const SizedBox(height: 8),
           Text(p.description, style: Theme.of(context).textTheme.bodyMedium)
               .animate(delay: 300.ms).fadeIn(),
+
+          // ─── Specifications ──────────────────────────────────────────
+          if (p.specifications.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text('Specifications', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.bgSurface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.borderSubtle),
+              ),
+              child: Column(
+                children: p.specifications.entries
+                    .map((e) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(e.key,
+                                  style: const TextStyle(
+                                      color: AppTheme.textMuted, fontSize: 13)),
+                              Text(e.value,
+                                  style: const TextStyle(
+                                      color: AppTheme.textPrimary,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ).animate(delay: 350.ms).fadeIn(),
+          ],
 
           const SizedBox(height: 24),
 
