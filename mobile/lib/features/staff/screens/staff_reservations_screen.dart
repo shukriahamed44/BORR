@@ -2,8 +2,9 @@
  * FORMAL ARCHITECTURAL DESCRIPTION:
  * Staff Reservation Management Screen (`staff_reservations_screen.dart`).
  * Fetches all reservations from GET /api/v1/reservations for staff review.
- * Allows staff to Approve (PATCH status → CONFIRMED) or Update status
- * via action buttons on each card. Role-restricted to STAFF/ADMIN/WAREHOUSE_OPERATOR.
+ * Allows staff to Approve / Reject (PATCH status), check equipment out (ACTIVE)
+ * and back in (RETURNED). Offered transitions mirror the backend state machine.
+ * Role-restricted to STAFF/ADMIN/WAREHOUSE_OPERATOR.
  *
  * IN SIMPLE WORDS:
  * The staff page to see all customer reservations and approve or update their status.
@@ -13,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../features/auth/providers/auth_provider.dart';
@@ -33,7 +35,7 @@ class _StaffReservationsScreenState extends State<StaffReservationsScreen> {
 
   // Status filter
   String _filter = 'ALL';
-  final _filters = ['ALL', 'PENDING', 'CONFIRMED', 'ACTIVE', 'COMPLETED', 'CANCELLED'];
+  final _filters = ['ALL', ...AppConstants.reservationStatuses];
 
   @override
   void initState() {
@@ -45,7 +47,8 @@ class _StaffReservationsScreenState extends State<StaffReservationsScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final res = await apiService.get('/reservations');
-      final list = (res.data as List)
+      // Backend wraps the collection: { count, reservations: [...] }
+      final list = ((res.data['reservations'] ?? []) as List)
           .map((e) => ReservationModel.fromJson(e as Map<String, dynamic>))
           .toList();
       setState(() { _reservations = list; _loading = false; });
@@ -79,7 +82,17 @@ class _StaffReservationsScreenState extends State<StaffReservationsScreen> {
   }
 
   void _showStatusDialog(ReservationModel res) {
-    const statuses = ['PENDING', 'CONFIRMED', 'ACTIVE', 'COMPLETED', 'CANCELLED'];
+    final statuses = AppConstants.nextStatuses(res.status);
+    if (statuses.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${res.status} is a final state — no further changes.'),
+          backgroundColor: AppTheme.textMuted,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.bgSurface,
@@ -102,16 +115,15 @@ class _StaffReservationsScreenState extends State<StaffReservationsScreen> {
                   leading: Container(
                     width: 10, height: 10,
                     decoration: BoxDecoration(
-                      color: _statusColor(s),
+                      color: AppTheme.statusColor(s),
                       shape: BoxShape.circle,
                     ),
                   ),
-                  title: Text(s, style: const TextStyle(color: AppTheme.textPrimary)),
-                  selected: s == res.status,
-                  selectedColor: AppTheme.primary,
+                  title: Text(AppConstants.statusLabels[s] ?? s,
+                      style: const TextStyle(color: AppTheme.textPrimary)),
                   onTap: () {
                     Navigator.pop(context);
-                    if (s != res.status) _updateStatus(res.id, s);
+                    _updateStatus(res.id, s);
                   },
                 )),
             const SizedBox(height: 8),
@@ -119,16 +131,6 @@ class _StaffReservationsScreenState extends State<StaffReservationsScreen> {
         ),
       ),
     );
-  }
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'CONFIRMED': return AppTheme.accent;
-      case 'ACTIVE': return AppTheme.primary;
-      case 'COMPLETED': return AppTheme.textMuted;
-      case 'CANCELLED': return AppTheme.danger;
-      default: return AppTheme.warning;
-    }
   }
 
   List<ReservationModel> get _filteredList {
@@ -173,7 +175,7 @@ class _StaffReservationsScreenState extends State<StaffReservationsScreen> {
                 final f = _filters[i];
                 final isSelected = _filter == f;
                 return ChoiceChip(
-                  label: Text(f),
+                  label: Text(f == 'ALL' ? 'All' : (AppConstants.statusLabels[f] ?? f)),
                   selected: isSelected,
                   onSelected: (_) => setState(() => _filter = f),
                   selectedColor: AppTheme.primary.withOpacity(0.2),
@@ -204,7 +206,7 @@ class _StaffReservationsScreenState extends State<StaffReservationsScreen> {
                                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                                 itemBuilder: (_, i) {
                                   final r = _filteredList[i];
-                                  final statusColor = _statusColor(r.status);
+                                  final statusColor = AppTheme.statusColor(r.status);
                                   return Container(
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
@@ -246,7 +248,7 @@ class _StaffReservationsScreenState extends State<StaffReservationsScreen> {
                                                 child: Row(
                                                   mainAxisSize: MainAxisSize.min,
                                                   children: [
-                                                    Text(r.status,
+                                                    Text(AppConstants.statusLabels[r.status] ?? r.status,
                                                         style: TextStyle(
                                                             color: statusColor, fontSize: 11, fontWeight: FontWeight.w600)),
                                                     const SizedBox(width: 4),
@@ -279,19 +281,58 @@ class _StaffReservationsScreenState extends State<StaffReservationsScreen> {
                                         Row(
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Text('\$${r.totalAmount.toStringAsFixed(2)}',
+                                            Text('\$${r.totalPrice.toStringAsFixed(2)}',
                                                 style: const TextStyle(
                                                     color: AppTheme.primary,
                                                     fontWeight: FontWeight.w700,
                                                     fontSize: 16)),
-                                            if (r.status == 'PENDING')
+                                            // Primary action per state: approve/reject pending,
+                                            // check out approved, check in active.
+                                            if (r.status == 'PENDING') ...[
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  OutlinedButton(
+                                                    onPressed: () => _updateStatus(r.id, 'REJECTED'),
+                                                    style: OutlinedButton.styleFrom(
+                                                      foregroundColor: AppTheme.danger,
+                                                      side: const BorderSide(color: AppTheme.danger),
+                                                      minimumSize: const Size(80, 36),
+                                                    ),
+                                                    child: const Text('Reject'),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  ElevatedButton.icon(
+                                                    onPressed: () => _updateStatus(r.id, 'APPROVED'),
+                                                    icon: const Icon(Icons.check_circle_outline, size: 16),
+                                                    label: const Text('Approve'),
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor: AppTheme.accent,
+                                                      minimumSize: const Size(100, 36),
+                                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ] else if (r.status == 'APPROVED')
                                               ElevatedButton.icon(
-                                                onPressed: () => _updateStatus(r.id, 'CONFIRMED'),
-                                                icon: const Icon(Icons.check_circle_outline, size: 16),
-                                                label: const Text('Approve'),
+                                                onPressed: () => _updateStatus(r.id, 'ACTIVE'),
+                                                icon: const Icon(Icons.outbox_rounded, size: 16),
+                                                label: const Text('Check Out'),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: AppTheme.primary,
+                                                  minimumSize: const Size(110, 36),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                ),
+                                              )
+                                            else if (r.status == 'ACTIVE')
+                                              ElevatedButton.icon(
+                                                onPressed: () => _updateStatus(r.id, 'RETURNED'),
+                                                icon: const Icon(Icons.assignment_turned_in_outlined, size: 16),
+                                                label: const Text('Check In'),
                                                 style: ElevatedButton.styleFrom(
                                                   backgroundColor: AppTheme.accent,
-                                                  minimumSize: const Size(100, 36),
+                                                  minimumSize: const Size(110, 36),
                                                   padding: const EdgeInsets.symmetric(horizontal: 12),
                                                 ),
                                               ),
