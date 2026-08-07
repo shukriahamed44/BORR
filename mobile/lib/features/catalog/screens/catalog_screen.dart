@@ -9,6 +9,8 @@
  * all available equipment with stock status and daily rate.
  */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -27,43 +29,107 @@ class CatalogScreen extends StatefulWidget {
 }
 
 class _CatalogScreenState extends State<CatalogScreen> {
-  List<ProductModel> _products = [];
-  List<ProductModel> _filtered = [];
+  final List<ProductModel> _products = [];
+  List<CategoryModel> _categories = [];
+  String? _categorySlug;
+
   bool _loading = true;
+  bool _loadingMore = false;
   String? _error;
+
+  int _page = 1;
+  int _totalPages = 1;
+
   final _searchCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
+    _loadCategories();
     _loadProducts();
-    _searchCtrl.addListener(_onSearch);
+    _searchCtrl.addListener(_onSearchChanged);
+    _scrollCtrl.addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchCtrl.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _loadProducts() async {
-    setState(() { _loading = true; _error = null; });
+  Future<void> _loadCategories() async {
     try {
-      final res = await apiService.get('/products');
-      final list = (res.data as List).map((e) => ProductModel.fromJson(e as Map<String, dynamic>)).toList();
-      setState(() { _products = list; _filtered = list; _loading = false; });
-    } catch (e) {
-      setState(() { _error = e.toString(); _loading = false; });
+      final res = await apiService.get('/categories');
+      final list = ((res.data['categories'] ?? []) as List)
+          .map((e) => CategoryModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      if (mounted) setState(() => _categories = list);
+    } catch (_) {
+      // Filter chips are optional chrome — a failure here must not break the catalog.
     }
   }
 
-  void _onSearch() {
-    final q = _searchCtrl.text.toLowerCase();
+  /// Loads page 1 fresh, or appends the next page when [append] is true.
+  Future<void> _loadProducts({bool append = false}) async {
     setState(() {
-      _filtered = _products
-          .where((p) => p.name.toLowerCase().contains(q) || p.description.toLowerCase().contains(q))
-          .toList();
+      if (append) {
+        _loadingMore = true;
+      } else {
+        _loading = true;
+        _error = null;
+        _page = 1;
+      }
     });
+
+    try {
+      final res = await apiService.get('/products', params: {
+        'page': _page,
+        'limit': 12,
+        if (_searchCtrl.text.trim().isNotEmpty) 'search': _searchCtrl.text.trim(),
+        if (_categorySlug != null) 'categorySlug': _categorySlug,
+      });
+
+      // Backend wraps the collection: { products: [...], total, page, totalPages }
+      final list = ((res.data['products'] ?? []) as List)
+          .map((e) => ProductModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      setState(() {
+        if (!append) _products.clear();
+        _products.addAll(list);
+        _totalPages = res.data['totalPages'] ?? 1;
+        _loading = false;
+        _loadingMore = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+        _loadingMore = false;
+      });
+    }
+  }
+
+  void _onSearchChanged() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () => _loadProducts());
+  }
+
+  void _onScroll() {
+    if (_loadingMore || _loading || _page >= _totalPages) return;
+    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 300) {
+      _page++;
+      _loadProducts(append: true);
+    }
+  }
+
+  void _selectCategory(String? slug) {
+    setState(() => _categorySlug = slug);
+    _loadProducts();
   }
 
   @override
@@ -104,6 +170,33 @@ class _CatalogScreenState extends State<CatalogScreen> {
             ),
           ),
 
+          // ─── Category Filter Chips ─────────────────────────────────────
+          if (_categories.isNotEmpty)
+            SizedBox(
+              height: 44,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                scrollDirection: Axis.horizontal,
+                itemCount: _categories.length + 1,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, i) {
+                  final slug = i == 0 ? null : _categories[i - 1].slug;
+                  final label = i == 0 ? 'All' : _categories[i - 1].name;
+                  final selected = _categorySlug == slug;
+                  return ChoiceChip(
+                    label: Text(label),
+                    selected: selected,
+                    onSelected: (_) => _selectCategory(slug),
+                    selectedColor: AppTheme.primary.withOpacity(0.2),
+                    labelStyle: TextStyle(
+                      color: selected ? AppTheme.primary : AppTheme.textMuted,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  );
+                },
+              ),
+            ),
+
           // ─── Product Grid ──────────────────────────────────────────────
           Expanded(
             child: _loading
@@ -111,13 +204,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 : _error != null
                     ? _buildError()
                     : RefreshIndicator(
-                        onRefresh: _loadProducts,
+                        onRefresh: () => _loadProducts(),
                         color: AppTheme.primary,
-                        child: _filtered.isEmpty
+                        child: _products.isEmpty
                             ? const Center(
                                 child: Text('No equipment found.',
                                     style: TextStyle(color: AppTheme.textMuted)))
                             : GridView.builder(
+                                controller: _scrollCtrl,
                                 padding: const EdgeInsets.all(16),
                                 gridDelegate:
                                     const SliverGridDelegateWithFixedCrossAxisCount(
@@ -126,11 +220,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                   crossAxisSpacing: 12,
                                   childAspectRatio: 0.72,
                                 ),
-                                itemCount: _filtered.length,
-                                itemBuilder: (_, i) => _ProductCard(
-                                  product: _filtered[i],
-                                  index: i,
-                                ),
+                                // One extra slot holds the "loading next page" spinner.
+                                itemCount: _products.length + (_loadingMore ? 1 : 0),
+                                itemBuilder: (_, i) => i >= _products.length
+                                    ? const Center(
+                                        child: CircularProgressIndicator(
+                                            color: AppTheme.primary, strokeWidth: 2))
+                                    : _ProductCard(product: _products[i], index: i),
                               ),
                       ),
           ),
@@ -168,7 +264,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
           const SizedBox(height: 16),
           Text(_error!, style: const TextStyle(color: AppTheme.textMuted)),
           const SizedBox(height: 16),
-          ElevatedButton(onPressed: _loadProducts, child: const Text('Retry')),
+          ElevatedButton(onPressed: () => _loadProducts(), child: const Text('Retry')),
         ],
       ),
     );
@@ -257,7 +353,7 @@ class _ProductCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '\$${product.dailyRate.toStringAsFixed(2)}/day',
+                    '\$${product.pricePerDay.toStringAsFixed(2)}/day',
                     style: const TextStyle(
                       color: AppTheme.primary,
                       fontWeight: FontWeight.w700,

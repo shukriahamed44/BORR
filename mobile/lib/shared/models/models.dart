@@ -9,6 +9,14 @@
  * so Flutter knows what shape of data to expect from API responses.
  */
 
+/// Prisma `Decimal` columns are serialized as JSON **strings** ("249.5"), not numbers.
+/// Every money/price field must go through this or `.toDouble()` throws at runtime.
+double _toDouble(dynamic value) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0;
+  return 0;
+}
+
 class UserModel {
   final String id;
   final String name;
@@ -24,7 +32,7 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'] ?? '',
+      id: json['id'] ?? json['sub'] ?? '',
       name: json['name'] ?? '',
       email: json['email'] ?? '',
       role: json['role'] ?? 'CUSTOMER',
@@ -42,35 +50,64 @@ class UserModel {
 class ProductModel {
   final String id;
   final String name;
+  final String sku;
   final String description;
-  final double dailyRate;
-  final int stockQuantity;
+  final double pricePerDay;
+  final double deposit;
+  final int totalStock;
   final String? imageUrl;
-  final String? category;
+  final String? categoryName;
+  final Map<String, String> specifications;
 
   const ProductModel({
     required this.id,
     required this.name,
+    required this.sku,
     required this.description,
-    required this.dailyRate,
-    required this.stockQuantity,
+    required this.pricePerDay,
+    required this.deposit,
+    required this.totalStock,
     this.imageUrl,
-    this.category,
+    this.categoryName,
+    this.specifications = const {},
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
+    final specs = json['specifications'];
     return ProductModel(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
+      sku: json['sku'] ?? '',
       description: json['description'] ?? '',
-      dailyRate: (json['dailyRate'] ?? 0).toDouble(),
-      stockQuantity: json['stockQuantity'] ?? 0,
+      pricePerDay: _toDouble(json['pricePerDay']),
+      deposit: _toDouble(json['deposit']),
+      totalStock: json['totalStock'] ?? 0,
       imageUrl: json['imageUrl'],
-      category: json['category'],
+      // Backend includes the full category relation, not a plain string.
+      categoryName: json['category'] is Map ? json['category']['name'] : json['category'],
+      specifications: specs is Map
+          ? specs.map((k, v) => MapEntry(k.toString(), v.toString()))
+          : const {},
     );
   }
 
-  bool get inStock => stockQuantity > 0;
+  bool get inStock => totalStock > 0;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+class CategoryModel {
+  final String id;
+  final String name;
+  final String slug;
+
+  const CategoryModel({required this.id, required this.name, required this.slug});
+
+  factory CategoryModel.fromJson(Map<String, dynamic> json) => CategoryModel(
+        id: json['id'] ?? '',
+        name: json['name'] ?? '',
+        slug: json['slug'] ?? '',
+      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -79,13 +116,13 @@ class ReservationItemModel {
   final String productId;
   final String productName;
   final int quantity;
-  final double dailyRate;
+  final double unitPrice;
 
   const ReservationItemModel({
     required this.productId,
     required this.productName,
     required this.quantity,
-    required this.dailyRate,
+    required this.unitPrice,
   });
 
   factory ReservationItemModel.fromJson(Map<String, dynamic> json) {
@@ -93,7 +130,7 @@ class ReservationItemModel {
       productId: json['productId'] ?? '',
       productName: json['product']?['name'] ?? 'Unknown',
       quantity: json['quantity'] ?? 1,
-      dailyRate: (json['dailyRate'] ?? 0).toDouble(),
+      unitPrice: _toDouble(json['unitPrice']),
     );
   }
 }
@@ -105,8 +142,8 @@ class ReservationModel {
   final String status;
   final DateTime startDate;
   final DateTime endDate;
-  final double totalAmount;
-  final String customerId;
+  final double totalPrice;
+  final String userId;
   final String? customerName;
   final List<ReservationItemModel> items;
 
@@ -115,8 +152,8 @@ class ReservationModel {
     required this.status,
     required this.startDate,
     required this.endDate,
-    required this.totalAmount,
-    required this.customerId,
+    required this.totalPrice,
+    required this.userId,
     this.customerName,
     required this.items,
   });
@@ -127,9 +164,9 @@ class ReservationModel {
       status: json['status'] ?? 'PENDING',
       startDate: DateTime.tryParse(json['startDate'] ?? '') ?? DateTime.now(),
       endDate: DateTime.tryParse(json['endDate'] ?? '') ?? DateTime.now(),
-      totalAmount: (json['totalAmount'] ?? 0).toDouble(),
-      customerId: json['customerId'] ?? '',
-      customerName: json['customer']?['name'],
+      totalPrice: _toDouble(json['totalPrice']),
+      userId: json['userId'] ?? '',
+      customerName: json['user']?['name'],
       items: (json['items'] as List<dynamic>? ?? [])
           .map((i) => ReservationItemModel.fromJson(i as Map<String, dynamic>))
           .toList(),
