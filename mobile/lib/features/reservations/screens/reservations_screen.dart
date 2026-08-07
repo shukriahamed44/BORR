@@ -12,6 +12,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/models.dart';
@@ -39,7 +40,8 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final res = await apiService.get('/reservations');
-      final list = (res.data as List)
+      // Backend wraps the collection: { count, reservations: [...] }
+      final list = ((res.data['reservations'] ?? []) as List)
           .map((e) => ReservationModel.fromJson(e as Map<String, dynamic>))
           .toList();
       setState(() { _reservations = list; _loading = false; });
@@ -48,13 +50,29 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     }
   }
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'CONFIRMED': return AppTheme.accent;
-      case 'ACTIVE': return AppTheme.primary;
-      case 'COMPLETED': return AppTheme.textMuted;
-      case 'CANCELLED': return AppTheme.danger;
-      default: return AppTheme.warning;
+  Future<void> _cancel(ReservationModel r) async {
+    try {
+      await apiService.patch('/reservations/${r.id}/status', data: {'status': 'CANCELLED'});
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Reservation cancelled.'),
+            backgroundColor: AppTheme.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: AppTheme.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -88,7 +106,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                           separatorBuilder: (_, __) => const SizedBox(height: 12),
                           itemBuilder: (_, i) {
                             final r = _reservations[i];
-                            final statusColor = _statusColor(r.status);
+                            final statusColor = AppTheme.statusColor(r.status);
                             return Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
@@ -117,7 +135,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                           borderRadius: BorderRadius.circular(20),
                                         ),
                                         child: Text(
-                                          r.status,
+                                          AppConstants.statusLabels[r.status] ?? r.status,
                                           style: TextStyle(
                                             color: statusColor,
                                             fontSize: 11,
@@ -168,7 +186,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                       const Text('Total Amount',
                                           style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
                                       Text(
-                                        '\$${r.totalAmount.toStringAsFixed(2)}',
+                                        '\$${r.totalPrice.toStringAsFixed(2)}',
                                         style: const TextStyle(
                                           color: AppTheme.primary,
                                           fontWeight: FontWeight.w700,
@@ -177,6 +195,22 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                       ),
                                     ],
                                   ),
+                                  // Only PENDING/APPROVED reservations can still be cancelled —
+                                  // the backend state machine rejects anything else.
+                                  if (r.status == 'PENDING' || r.status == 'APPROVED') ...[
+                                    const SizedBox(height: 8),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: TextButton.icon(
+                                        onPressed: () => _cancel(r),
+                                        icon: const Icon(Icons.close_rounded, size: 16),
+                                        label: const Text('Cancel Reservation'),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: AppTheme.danger,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ).animate(delay: Duration(milliseconds: i * 80)).fadeIn().slideY(begin: 0.1, end: 0);

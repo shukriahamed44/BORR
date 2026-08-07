@@ -118,7 +118,7 @@ class _CreateReservationScreenState extends State<CreateReservationScreen> {
     return _endDate!.difference(_startDate!).inDays;
   }
 
-  double get _total => _product != null ? _days * _product!.dailyRate * _quantity : 0;
+  double get _total => _product != null ? _days * _product!.pricePerDay * _quantity : 0;
 
   @override
   Widget build(BuildContext context) {
@@ -165,7 +165,7 @@ class _CreateReservationScreenState extends State<CreateReservationScreen> {
                           Text(_product!.name,
                               style: const TextStyle(
                                   color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                          Text('\$${_product!.dailyRate.toStringAsFixed(2)}/day',
+                          Text('\$${_product!.pricePerDay.toStringAsFixed(2)}/day',
                               style: const TextStyle(color: AppTheme.primary, fontSize: 13)),
                         ],
                       ),
@@ -239,7 +239,11 @@ class _CreateReservationScreenState extends State<CreateReservationScreen> {
                 child: Column(
                   children: [
                     _SummaryRow('Duration', '$_days days'),
-                    _SummaryRow('Unit Rate', '\$${_product!.dailyRate}/day × $_quantity units'),
+                    _SummaryRow('Unit Rate',
+                        '\$${_product!.pricePerDay.toStringAsFixed(2)}/day × $_quantity units'),
+                    if (_product!.deposit > 0)
+                      _SummaryRow('Refundable Deposit',
+                          '\$${(_product!.deposit * _quantity).toStringAsFixed(2)}'),
                     const Divider(color: AppTheme.borderMedium, height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
