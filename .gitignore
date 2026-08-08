@@ -25,6 +25,9 @@ mobile/.flutter-plugins-dependencies
 .env.test.local
 .env.production.local
 
+# Design references (source screenshots, not part of the deliverable)
+UI folder/
+
 # IDEs & System
 .DS_Store
 Thumbs.db
