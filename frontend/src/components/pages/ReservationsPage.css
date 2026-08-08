@@ -1,0 +1,524 @@
+/**
+ * Reservations page styles — status tabs, reservation cards, detail drawer and
+ * document review rows. Imported by ReservationsPage.tsx.
+ */
+
+/* ── Status tabs ───────────────────────────────────────────────────────── */
+
+.res-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.res-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  background: rgba(241, 245, 249, 0.85);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.22s var(--ease-out-expo);
+}
+
+.res-tab:hover {
+  background: rgba(226, 232, 240, 0.95);
+  color: #0F172A;
+}
+
+.res-tab.active {
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  border-color: rgba(37, 99, 235, 0.8);
+  color: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+}
+
+.res-tab-count {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.res-tab.active .res-tab-count {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.res-search {
+  margin-bottom: 14px;
+}
+
+/* ── Reservation cards ─────────────────────────────────────────────────── */
+
+.res-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.res-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  flex-wrap: wrap;
+  transition: transform 0.2s var(--ease-out-expo), box-shadow 0.2s var(--ease-out-expo);
+}
+
+.res-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+}
+
+.res-card-main {
+  flex: 1;
+  min-width: 240px;
+  cursor: pointer;
+}
+
+.res-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.res-card-body {
+  display: flex;
+  gap: 26px;
+  flex-wrap: wrap;
+}
+
+.res-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.res-field-label {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #94A3B8;
+}
+
+.res-field-value {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: #334155;
+}
+
+.res-field-value.strong {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.res-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Status pills ──────────────────────────────────────────────────────── */
+
+.status-pill {
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.status-pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #B45309;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.status-approved {
+  background: rgba(37, 99, 235, 0.14);
+  color: #1D4ED8;
+  border: 1px solid rgba(37, 99, 235, 0.35);
+}
+
+.status-active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.status-returned {
+  background: rgba(100, 116, 139, 0.15);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+.status-rejected,
+.status-cancelled {
+  background: rgba(239, 68, 68, 0.13);
+  color: #B91C1C;
+  border: 1px solid rgba(239, 68, 68, 0.32);
+}
+
+/* ── Detail drawer ─────────────────────────────────────────────────────── */
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+  animation: drawerFade 0.25s var(--ease-out-expo) both;
+}
+
+@keyframes drawerFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.res-drawer {
+  width: min(460px, 100%);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.97);
+  border-left: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: -18px 0 48px rgba(15, 23, 42, 0.18);
+  animation: drawerSlide 0.32s var(--ease-out-expo) both;
+}
+
+@keyframes drawerSlide {
+  from { transform: translateX(28px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.drawer-header > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.drawer-close {
+  position: static;
+  background: rgba(241, 245, 249, 0.9);
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  color: #475569;
+  box-shadow: none;
+}
+
+.drawer-close:hover {
+  background: rgba(226, 232, 240, 1);
+  border-color: rgba(148, 163, 184, 1);
+}
+
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.drawer-alert {
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #B91C1C;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.drawer-section-title {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748B;
+  margin-bottom: 10px;
+}
+
+.drawer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+}
+
+.drawer-grid dt {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  color: #94A3B8;
+  margin-bottom: 2px;
+}
+
+.drawer-grid dd {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: #0F172A;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer-grid dd.strong {
+  font-weight: 700;
+}
+
+.drawer-sub {
+  font-size: 11px;
+  color: #94A3B8;
+}
+
+.drawer-items {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drawer-items li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 11px;
+  background: rgba(241, 245, 249, 0.85);
+}
+
+.drawer-item-name {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: #0F172A;
+}
+
+.drawer-item-meta {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: #64748B;
+  white-space: nowrap;
+}
+
+.drawer-empty {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: #94A3B8;
+}
+
+/* ── Documents ─────────────────────────────────────────────────────────── */
+
+.doc-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.doc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(241, 245, 249, 0.85);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  flex-wrap: wrap;
+}
+
+.doc-info {
+  flex: 1;
+  min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.doc-name {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.doc-meta {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  color: #94A3B8;
+}
+
+.doc-note {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: #B91C1C;
+  margin-top: 2px;
+}
+
+.doc-status {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 9999px;
+}
+
+.doc-pending_review {
+  background: rgba(245, 158, 11, 0.15);
+  color: #B45309;
+}
+
+.doc-verified {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+
+.doc-rejected {
+  background: rgba(239, 68, 68, 0.13);
+  color: #B91C1C;
+}
+
+.doc-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.doc-actions .btn-small-glass {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.doc-upload-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.doc-upload-btn {
+  flex: 1;
+  min-width: 150px;
+  text-align: center;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1.5px dashed rgba(37, 99, 235, 0.45);
+  background: rgba(37, 99, 235, 0.06);
+  color: #2563EB;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.22s var(--ease-out-expo);
+}
+
+.doc-upload-btn:hover {
+  background: rgba(37, 99, 235, 0.13);
+  border-color: #2563EB;
+}
+
+.drawer-footer {
+  display: flex;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.drawer-footer > button {
+  flex: 1;
+  justify-content: center;
+}
+
+/* ── Dark mode ─────────────────────────────────────────────────────────── */
+
+[data-theme="dark"] .res-tab {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #C7D2E0;
+}
+
+[data-theme="dark"] .res-tab:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #FFFFFF;
+}
+
+[data-theme="dark"] .res-tab-count {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .res-field-value {
+  color: #C7D2E0;
+}
+
+[data-theme="dark"] .res-field-value.strong,
+[data-theme="dark"] .drawer-grid dd,
+[data-theme="dark"] .drawer-item-name,
+[data-theme="dark"] .doc-name {
+  color: #F1F5F9;
+}
+
+[data-theme="dark"] .res-drawer {
+  background: rgba(17, 24, 35, 0.98);
+  border-left-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .drawer-header,
+[data-theme="dark"] .drawer-footer {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .drawer-close {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #C7D2E0;
+}
+
+[data-theme="dark"] .drawer-items li,
+[data-theme="dark"] .doc-row {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .status-returned {
+  background: rgba(148, 163, 184, 0.18);
+  color: #CBD5E1;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .res-card-body {
+    gap: 14px;
+  }
+
+  .drawer-grid {
+    grid-template-columns: 1fr;
+  }
+}

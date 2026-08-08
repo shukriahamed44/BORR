@@ -1,370 +1,582 @@
 /**
- * FORMAL ARCHITECTURAL DESCRIPTION:
- * Main Interactive Application Component (`App.tsx`).
- * Implements a full-stack React authentication testing dashboard communicating with NestJS `/api/v1/auth` endpoints.
- * Handles form state management, JWT Access Token & Refresh Token storage, role badge rendering,
- * and live API request inspection.
- *
- * IN SIMPLE WORDS:
- * The frontend dashboard screen where you can sign up, log in as any role (Admin, Staff, Customer, Warehouse),
- * inspect your JWT token, and test protected API endpoints visually.
+ * BORR Landing Page — Main Application Component
+ * ────────────────────────────────────────────────
+ * Implements Page 1 (Hero), Page 2 (Categories Carousel), Page 3 (Ready to Rent CTA Banner),
+ * and the Modern BORR Footer with massive watermark typography, quick links, and email subscription.
  */
 
-import React, { useState } from 'react';
-
-const API_BASE = 'http://localhost:3000/api/v1';
+import { useEffect, useRef, useState } from 'react';
+import { AppShell } from './components/layout/AppShell';
+import type { UserProfile } from './types/auth';
+import {
+  authApi,
+  setTokens,
+  clearAuthToken,
+  getAuthToken,
+} from './services/api';
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>('register');
-  
-  // Registration State
-  const [regEmail, setRegEmail] = useState('admin@ammunation.com');
-  const [regPassword, setRegPassword] = useState('Password123!');
-  const [regName, setRegName] = useState('Commander Alex');
-  const [regRole, setRegRole] = useState('ADMIN');
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  // Blocks the first paint while a stored token is exchanged for the session user,
+  // so a refresh does not flash the landing page before restoring the portal.
+  const [restoringSession, setRestoringSession] = useState(!!getAuthToken());
 
-  // Login State
-  const [loginEmail, setLoginEmail] = useState('admin@ammunation.com');
-  const [loginPassword, setLoginPassword] = useState('Password123!');
+  // Auth form state
+  const [authName, setAuthName] = useState('');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
 
-  // Auth & Token Storage State
-  const [accessToken, setAccessToken] = useState<string>('');
-  const [refreshToken, setRefreshToken] = useState<string>('');
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  
-  // Status UI State
-  const [loading, setLoading] = useState(false);
-  const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [apiResponseLog, setApiResponseLog] = useState<string>('No API calls made yet.');
+  // Rehydrate the session from a persisted JWT on mount. A rejected or expired token
+  // is discarded rather than left to fail every subsequent request.
+  useEffect(() => {
+    if (!getAuthToken()) return;
 
-  // Handle Registration
-  const handleRegister = async (e: React.FormEvent) => {
+    let cancelled = false;
+    authApi
+      .getProfile()
+      .then(({ user }) => {
+        if (!cancelled) setCurrentUser(user);
+      })
+      .catch(() => {
+        clearAuthToken();
+      })
+      .finally(() => {
+        if (!cancelled) setRestoringSession(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setStatusMsg(null);
-    setApiResponseLog('Sending POST /api/v1/auth/register...');
-
+    setAuthError(null);
+    setAuthLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: regEmail,
-          password: regPassword,
-          name: regName,
-          role: regRole,
-        }),
-      });
+      const result =
+        authMode === 'signin'
+          ? await authApi.login(authEmail, authPassword)
+          : await authApi.register({
+              name: authName,
+              email: authEmail,
+              password: authPassword,
+            });
 
-      const data = await res.json();
-      setApiResponseLog(JSON.stringify(data, null, 2));
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Registration failed.');
-      }
-
-      setAccessToken(data.accessToken);
-      setRefreshToken(data.refreshToken);
-      setCurrentUser(data.user);
-      setStatusMsg({ type: 'success', text: `Account created successfully as ${data.user.role}!` });
+      setTokens(result.accessToken, result.refreshToken);
+      setCurrentUser(result.user);
+      setAuthModalOpen(false);
+      setAuthPassword('');
     } catch (err: any) {
-      setStatusMsg({ type: 'error', text: err.message });
+      setAuthError(err.message || 'Authentication failed.');
     } finally {
-      setLoading(false);
+      setAuthLoading(false);
     }
   };
 
-  // Handle Login
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setStatusMsg(null);
-    setApiResponseLog('Sending POST /api/v1/auth/login...');
-
-    try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: loginEmail,
-          password: loginPassword,
-        }),
-      });
-
-      const data = await res.json();
-      setApiResponseLog(JSON.stringify(data, null, 2));
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Login failed.');
-      }
-
-      setAccessToken(data.accessToken);
-      setRefreshToken(data.refreshToken);
-      setCurrentUser(data.user);
-      setStatusMsg({ type: 'success', text: `Logged in as ${data.user.name} (${data.user.role})` });
-    } catch (err: any) {
-      setStatusMsg({ type: 'error', text: err.message });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch Protected Profile (/auth/me)
-  const fetchProfile = async () => {
-    if (!accessToken) {
-      setStatusMsg({ type: 'error', text: 'No Access Token found. Please login or register first.' });
-      return;
-    }
-
-    setLoading(true);
-    setApiResponseLog('Sending GET /api/v1/auth/me with Bearer Token...');
-
-    try {
-      const res = await fetch(`${API_BASE}/auth/me`, {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-
-      const data = await res.json();
-      setApiResponseLog(JSON.stringify(data, null, 2));
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Failed to fetch profile.');
-      }
-
-      setCurrentUser(data.user);
-      setStatusMsg({ type: 'success', text: 'Profile fetched successfully from JWT token payload!' });
-    } catch (err: any) {
-      setStatusMsg({ type: 'error', text: err.message });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Refresh Token Request (/auth/refresh)
-  const handleRefreshToken = async () => {
-    if (!refreshToken) {
-      setStatusMsg({ type: 'error', text: 'No Refresh Token available.' });
-      return;
-    }
-
-    setLoading(true);
-    setApiResponseLog('Sending POST /api/v1/auth/refresh...');
-
-    try {
-      const res = await fetch(`${API_BASE}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
-      });
-
-      const data = await res.json();
-      setApiResponseLog(JSON.stringify(data, null, 2));
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Token refresh failed.');
-      }
-
-      setAccessToken(data.accessToken);
-      if (data.refreshToken) setRefreshToken(data.refreshToken);
-      setStatusMsg({ type: 'success', text: 'Access Token refreshed successfully!' });
-    } catch (err: any) {
-      setStatusMsg({ type: 'error', text: err.message });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Logout
-  const handleLogout = () => {
-    setAccessToken('');
-    setRefreshToken('');
+  const handleSignOut = () => {
+    clearAuthToken();
     setCurrentUser(null);
-    setStatusMsg({ type: 'success', text: 'Logged out.' });
-    setApiResponseLog('Logged out.');
   };
+
+  if (restoringSession) {
+    return (
+      <div className="session-restore">
+        <div className="session-restore-spinner" />
+        <p>Restoring your session…</p>
+      </div>
+    );
+  }
+
+  if (currentUser) {
+    return <AppShell currentUser={currentUser} onSignOut={handleSignOut} />;
+  }
+
+  const scrollRight = () => {
+    if (carouselRef.current) {
+      carouselRef.current.scrollBy({ left: 280, behavior: 'smooth' });
+    }
+  };
+
+  const categoryItems = [
+    {
+      id: 1,
+      title: 'Power Tools',
+      count: '120+ items',
+      icon: (
+        <svg viewBox="0 0 64 64" fill="none" className="category-card-icon">
+          <path d="M12 40l16-16 8 8-16 16z" fill="#1B69AD" />
+          <path d="M36 16l8-8 12 12-8 8z" fill="#002D55" />
+          <rect x="8" y="44" width="12" height="12" rx="3" fill="#1B69AD" />
+        </svg>
+      ),
+    },
+    {
+      id: 2,
+      title: 'Lifting Equipment',
+      count: '80+ items',
+      icon: (
+        <svg viewBox="0 0 64 64" fill="none" className="category-card-icon">
+          <rect x="16" y="12" width="32" height="20" rx="4" fill="#1B69AD" />
+          <path d="M20 32l-8 20h40l-8-20z" fill="#002D55" />
+        </svg>
+      ),
+    },
+    {
+      id: 3,
+      title: 'Camera & Photo',
+      count: '95+ items',
+      icon: (
+        <svg viewBox="0 0 64 64" fill="none" className="category-card-icon">
+          <rect x="12" y="20" width="40" height="28" rx="6" fill="#002D55" />
+          <circle cx="32" cy="34" r="9" stroke="#1B69AD" strokeWidth="4" />
+          <path d="M24 14h16l4 6H20z" fill="#1B69AD" />
+        </svg>
+      ),
+    },
+    {
+      id: 4,
+      title: 'Generators',
+      count: '60+ items',
+      icon: (
+        <svg viewBox="0 0 64 64" fill="none" className="category-card-icon">
+          <rect x="12" y="16" width="40" height="32" rx="6" fill="#1B69AD" />
+          <circle cx="24" cy="32" r="6" fill="#002D55" />
+          <circle cx="40" cy="32" r="6" fill="#002D55" />
+        </svg>
+      ),
+    },
+    {
+      id: 5,
+      title: 'More',
+      count: 'Explore all',
+      icon: (
+        <svg viewBox="0 0 64 64" fill="none" className="category-card-icon">
+          <rect x="16" y="16" width="32" height="32" rx="8" fill="#1B69AD" />
+          <path d="M26 32h12M32 26v12" stroke="white" strokeWidth="4" strokeLinecap="round" />
+        </svg>
+      ),
+    },
+  ];
 
   return (
-    <div className="app-container">
-      {/* Header */}
-      <header className="header">
-        <div className="brand">
-          <div className="brand-icon">A</div>
-          <div>
-            <h1 className="brand-title">AmmuNation ERP</h1>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Phase 2 Authentication & Security Tester</p>
-          </div>
-        </div>
-        <div className="badge-tag">NestJS + JWT + Prisma</div>
-      </header>
-
-      {/* Main Grid Layout */}
-      <div className="grid-layout">
-        {/* Left Column: Form Controls */}
-        <div className="card">
-          <div className="card-header">
-            <h2 className="card-title">Authentication Portal</h2>
-            <p className="card-subtitle">Create accounts or log in to generate JWT tokens</p>
-          </div>
-
-          {/* Navigation Tabs */}
-          <div className="nav-tabs">
+    <div className="landing-page">
+      {/* ── Page 1: Hero Section ───────────────────────────────────── */}
+      <section className="hero">
+        {/* Navbar */}
+        <nav className="navbar">
+          <div className="nav-brand-spacer" />
+          <div className="nav-center">
+            <a href="#" className="nav-link">HOME</a>
+            <a href="#categories" className="nav-link">EQUIPMENTS</a>
             <button
-              className={`tab-btn ${activeTab === 'register' ? 'active' : ''}`}
-              onClick={() => setActiveTab('register')}
+              className="nav-link"
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+              onClick={() => {
+                setAuthMode('signin');
+                setAuthModalOpen(true);
+              }}
             >
-              Register New Account
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'login' ? 'active' : ''}`}
-              onClick={() => setActiveTab('login')}
-            >
-              Login Existing User
+              PORTAL DASHBOARD
             </button>
           </div>
-
-          {statusMsg && (
-            <div className={`alert-box alert-${statusMsg.type}`}>
-              {statusMsg.text}
-            </div>
-          )}
-
-          {activeTab === 'register' ? (
-            <form onSubmit={handleRegister}>
-              <div className="form-group">
-                <label className="form-label">Full Name</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={regName}
-                  onChange={(e) => setRegName(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Email Address</label>
-                <input
-                  type="email"
-                  className="form-input"
-                  value={regEmail}
-                  onChange={(e) => setRegEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Password</label>
-                <input
-                  type="password"
-                  className="form-input"
-                  value={regPassword}
-                  onChange={(e) => setRegPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Assign Role (RBAC Target)</label>
-                <select
-                  className="form-select"
-                  value={regRole}
-                  onChange={(e) => setRegRole(e.target.value)}
-                >
-                  <option value="ADMIN">ADMIN</option>
-                  <option value="STAFF">STAFF</option>
-                  <option value="CUSTOMER">CUSTOMER</option>
-                  <option value="WAREHOUSE_OPERATOR">WAREHOUSE_OPERATOR</option>
-                </select>
-              </div>
-
-              <button type="submit" className="btn-primary" disabled={loading}>
-                {loading ? 'Processing...' : 'Register User'}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleLogin}>
-              <div className="form-group">
-                <label className="form-label">Email Address</label>
-                <input
-                  type="email"
-                  className="form-input"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Password</label>
-                <input
-                  type="password"
-                  className="form-input"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              <button type="submit" className="btn-primary" disabled={loading}>
-                {loading ? 'Authenticating...' : 'Log In'}
-              </button>
-            </form>
-          )}
-        </div>
-
-        {/* Right Column: Live Session & API Inspector */}
-        <div className="card">
-          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h2 className="card-title">Live Auth Session</h2>
-              <p className="card-subtitle">Inspecting active tokens & protected user profile</p>
-            </div>
-            {currentUser && (
-              <button className="btn-secondary" onClick={handleLogout}>Logout</button>
-            )}
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button
+              className="btn-signin"
+              onClick={() => {
+                setAuthMode('signin');
+                setAuthModalOpen(true);
+              }}
+            >
+              SIGN IN
+            </button>
           </div>
+        </nav>
 
-          {currentUser ? (
-            <div style={{ marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '1rem', fontWeight: 600 }}>{currentUser.name}</span>
-                <span className={`role-badge role-${currentUser.role}`}>{currentUser.role}</span>
-              </div>
-              <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1rem' }}>{currentUser.email}</p>
-              
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                <button className="btn-secondary" onClick={fetchProfile} disabled={loading}>
-                  Verify /auth/me
-                </button>
-                <button className="btn-secondary" onClick={handleRefreshToken} disabled={loading}>
-                  Refresh Access Token
-                </button>
+        {/* Hero Content */}
+        <div className="hero-content">
+          <div className="hero-brand">
+            <img src="/mainLogo.png" alt="BORR Logo" className="hero-brand-img" />
+          </div>
+          <h1 className="hero-headline">
+            <span className="hero-line"><span className="text-white">BORROW</span></span>
+            <span className="hero-line"><span className="text-white">BIG </span><span className="text-navy">OWN</span></span>
+            <span className="hero-line"><span className="text-navy">SMALL</span></span>
+          </h1>
+          <a href="#categories" className="btn-book-now">
+            <span>BOOK NOW</span>
+            <span className="btn-arrow">→</span>
+          </a>
+        </div>
+      </section>
+
+      {/* ── Page 2: Categories Section ─────────────────────────────── */}
+      <section className="categories-section" id="categories">
+        {/* Floating Liquid Glass Search Bar */}
+        <div className="search-bar-container">
+          <div className="search-bar liquid-glass">
+            {/* Search Input */}
+            <div className="search-field search-input-field">
+              <svg className="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="8.5" cy="8.5" r="6" />
+                <path d="M13 13l5 5" strokeLinecap="round" />
+              </svg>
+              <input type="text" placeholder="Search equipment..." />
+            </div>
+
+            <div className="search-divider" />
+
+            {/* Category Filter */}
+            <div className="search-field">
+              <span className="field-label">Category</span>
+              <div className="field-value">
+                <span>All Categories</span>
+                <svg className="chevron-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 4.5L6 7.5L9 4.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </div>
             </div>
-          ) : (
-            <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '10px', marginBottom: '1.5rem' }}>
-              No active session. Register or log in on the left panel to test token authentication.
-            </div>
-          )}
 
-          {/* Token Inspector */}
-          {accessToken && (
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label className="form-label" style={{ color: '#6366f1' }}>JWT Access Token (Bearer)</label>
-              <div className="code-box" style={{ fontSize: '0.7rem', wordBreak: 'break-all', color: '#c7d2fe' }}>
-                {accessToken}
+            <div className="search-divider" />
+
+            {/* Location Filter */}
+            <div className="search-field">
+              <span className="field-label">Location</span>
+              <div className="field-value">
+                <span>Select Location</span>
+                <svg className="location-icon" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 0C4.7 0 2 2.7 2 6c0 4.5 6 10 6 10s6-5.5 6-10c0-3.3-2.7-6-6-6zm0 8.5c-1.4 0-2.5-1.1-2.5-2.5S6.6 3.5 8 3.5s2.5 1.1 2.5 2.5S9.4 8.5 8 8.5z" />
+                </svg>
               </div>
             </div>
-          )}
 
-          {/* Raw Response Log */}
-          <div>
-            <label className="form-label">Backend HTTP Response Log</label>
-            <pre className="code-box">{apiResponseLog}</pre>
+            {/* Find Equipment Button */}
+            <button className="btn-find">Find Equipment&nbsp;&nbsp;→</button>
           </div>
         </div>
-      </div>
+
+        {/* Main Section Content Layout */}
+        <div className="categories-layout">
+          {/* Left Column (50% Width): Title & Action */}
+          <div className="categories-left">
+            <h2 className="categories-title">
+              <span className="title-blue">WHATEVER</span><br />
+              <span className="title-blue">YOU NEED,</span><br />
+              <span className="title-silver">WE'VE</span><br />
+              <span className="title-silver">GOT 'EM</span>
+            </h2>
+
+            <a href="#" className="btn-browse-categories">
+              <span>BROWSE CATEGORIES</span>
+              <span className="btn-arrow">→</span>
+            </a>
+          </div>
+
+          {/* Right Column (50% Width): Equipment Category Carousel */}
+          <div className="categories-right">
+            <div className="carousel-wrapper">
+              <div className="carousel-track" ref={carouselRef}>
+                {categoryItems.map((item) => (
+                  <div key={item.id} className="category-card">
+                    <div className="category-card-img-placeholder">
+                      {item.icon}
+                    </div>
+                    <h3 className="category-card-title">{item.title}</h3>
+                    <p className="category-card-count">{item.count}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Carousel Navigation Arrow Button */}
+              <button
+                className="carousel-btn-next"
+                onClick={scrollRight}
+                aria-label="Next categories"
+              >
+                →
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Page 3: Ready to Rent CTA Banner Section ───────────────── */}
+      <section className="cta-banner-section" id="ready-to-rent">
+        <div className="cta-banner-card">
+          <div className="cta-banner-content">
+            <h2 className="cta-banner-headline">
+              <span className="cta-line">READY</span><br />
+              <span className="cta-line">TO RENT ?</span>
+            </h2>
+
+            <div className="cta-banner-subtitle">
+              <span>Join the community who trusts</span>
+              <img src="/mainLogo.png" alt="BORR" className="cta-borr-logo" />
+            </div>
+
+            <div className="cta-banner-actions">
+              <a href="#" className="btn-cta-browse">
+                <span>BROWSE CATEGORIES</span>
+                <span className="btn-arrow">→</span>
+              </a>
+
+              <button className="btn-cta-video">
+                <span className="play-icon-circle">
+                  <svg viewBox="0 0 16 16" fill="#1B69AD" className="play-icon">
+                    <path d="M5 3.5v9l7-4.5-7-4.5z" />
+                  </svg>
+                </span>
+                <span>WATCH VIDEO</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer Section ─────────────────────────────────────────── */}
+      <footer className="footer">
+        {/* Giant Watermark Text */}
+        <div className="footer-watermark-wrapper">
+          <span className="footer-watermark-text">BORR</span>
+        </div>
+
+        {/* Main Footer Container */}
+        <div className="footer-container">
+          <div className="footer-grid">
+            {/* Column 1: Brand & Socials */}
+            <div className="footer-col footer-col-brand">
+              <div className="footer-brand-logo">
+                <img src="/mainLogo.png" alt="BORR" className="footer-logo-img" />
+              </div>
+              <p className="footer-brand-desc">
+                BORR is your trusted partner for renting professional equipment. Anytime, anywhere.
+              </p>
+              <div className="footer-socials">
+                <a href="#" className="social-link" aria-label="Instagram">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="social-icon">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                  </svg>
+                </a>
+                <a href="#" className="social-link" aria-label="Facebook">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="social-icon">
+                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+                  </svg>
+                </a>
+                <a href="#" className="social-link" aria-label="LinkedIn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="social-icon">
+                    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+                    <rect x="2" y="9" width="4" height="12" />
+                    <circle cx="4" cy="4" r="2" />
+                  </svg>
+                </a>
+                <a href="#" className="social-link" aria-label="YouTube">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="social-icon">
+                    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z" />
+                    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+
+            <div className="footer-v-divider" />
+
+            {/* Column 2: Quick Links */}
+            <div className="footer-col">
+              <h4 className="footer-col-title">Quick Links</h4>
+              <ul className="footer-links">
+                <li><a href="#">Home</a></li>
+                <li><a href="#">Equipment</a></li>
+                <li><a href="#">How it Works</a></li>
+                <li><a href="#">About Us</a></li>
+                <li><a href="#">Contact</a></li>
+              </ul>
+            </div>
+
+            {/* Column 3: Categories */}
+            <div className="footer-col">
+              <h4 className="footer-col-title">Categories</h4>
+              <ul className="footer-links">
+                <li><a href="#">Power Tools</a></li>
+                <li><a href="#">Lifting Equipment</a></li>
+                <li><a href="#">Camera & Photo</a></li>
+                <li><a href="#">Generators</a></li>
+                <li><a href="#">View All</a></li>
+              </ul>
+            </div>
+
+            {/* Column 4: Support */}
+            <div className="footer-col">
+              <h4 className="footer-col-title">Support</h4>
+              <ul className="footer-links">
+                <li><a href="#">Help Center</a></li>
+                <li><a href="#">Terms & Conditions</a></li>
+                <li><a href="#">Privacy Policy</a></li>
+                <li><a href="#">FAQs</a></li>
+              </ul>
+            </div>
+
+            {/* Column 5: Stay Updated (Newsletter) */}
+            <div className="footer-col footer-col-newsletter">
+              <h4 className="footer-col-title">Stay Updated</h4>
+              <p className="footer-newsletter-desc">
+                Get the latest updates and offers in your inbox.
+              </p>
+              <form className="footer-newsletter-form" onSubmit={(e) => e.preventDefault()}>
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="newsletter-input"
+                  required
+                />
+                <button type="submit" className="newsletter-btn" aria-label="Subscribe">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="newsletter-arrow">
+                    <line x1="5" y1="15" x2="15" y2="5" />
+                    <polyline points="7 5 15 5 15 13" />
+                  </svg>
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="footer-bottom">
+            <p>© 2025 BORR. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
+
+      {/* ── iOS Liquid Glass Auth Modal (Sign In / Sign Up) ────────── */}
+      {authModalOpen && (
+        <div className="auth-overlay" onClick={() => setAuthModalOpen(false)}>
+          <div className="auth-modal liquid-glass-modal" onClick={(e) => e.stopPropagation()}>
+            {/* Close Button */}
+            <button className="auth-close-btn" onClick={() => setAuthModalOpen(false)} aria-label="Close">
+              ✕
+            </button>
+
+            {/* Header */}
+            <div className="auth-header">
+              <h3 className="auth-title">
+                {authMode === 'signin' ? 'Welcome Back' : 'Create Account'}
+              </h3>
+            </div>
+
+            {/* Mode Switcher Tabs */}
+            <div className="auth-tabs">
+              <button
+                type="button"
+                className={`auth-tab ${authMode === 'signin' ? 'active' : ''}`}
+                onClick={() => setAuthMode('signin')}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                className={`auth-tab ${authMode === 'signup' ? 'active' : ''}`}
+                onClick={() => setAuthMode('signup')}
+              >
+                Sign Up
+              </button>
+            </div>
+
+            {/* Form */}
+            <form className="auth-form" onSubmit={handleAuthSubmit}>
+              {authError && <div className="auth-error">{authError}</div>}
+
+              {authMode === 'signup' && (
+                <div className="auth-field">
+                  <label className="auth-label">Full Name</label>
+                  <div className="auth-input-wrapper">
+                    <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    <input
+                      type="text"
+                      placeholder="John Doe"
+                      className="auth-input"
+                      value={authName}
+                      onChange={(e) => setAuthName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="auth-field">
+                <label className="auth-label">Email Address</label>
+                <div className="auth-input-wrapper">
+                  <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
+                  </svg>
+                  <input
+                    type="email"
+                    placeholder="name@example.com"
+                    className="auth-input"
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="auth-field">
+                <label className="auth-label">Password</label>
+                <div className="auth-input-wrapper">
+                  <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    className="auth-input"
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              {authMode === 'signin' && (
+                <div className="auth-options">
+                  <label className="auth-checkbox-label">
+                    <input type="checkbox" className="auth-checkbox" defaultChecked />
+                    <span>Remember me</span>
+                  </label>
+                  <a href="#" className="auth-forgot">Forgot Password?</a>
+                </div>
+              )}
+
+              <button type="submit" className="btn-auth-submit" disabled={authLoading}>
+                {authLoading
+                  ? 'Please wait…'
+                  : authMode === 'signin'
+                  ? 'Sign In'
+                  : 'Create Account'}
+              </button>
+            </form>
+
+            {/* Footer Toggle Prompt */}
+            <div className="auth-footer-prompt">
+              {authMode === 'signin' ? (
+                <p>Don't have an account? <button type="button" className="auth-toggle-link" onClick={() => setAuthMode('signup')}>Sign Up</button></p>
+              ) : (
+                <p>Already have an account? <button type="button" className="auth-toggle-link" onClick={() => setAuthMode('signin')}>Sign In</button></p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
