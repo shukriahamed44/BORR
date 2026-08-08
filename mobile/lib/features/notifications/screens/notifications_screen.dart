@@ -19,8 +19,7 @@ import '../providers/notification_provider.dart';
 import '../../../shared/models/models.dart';
 
 class NotificationsScreen extends StatelessWidget {
-  final bool isStaff;
-  const NotificationsScreen({super.key, this.isStaff = false});
+  const NotificationsScreen({super.key});
 
   String _relativeTime(DateTime dt) {
     final diff = DateTime.now().difference(dt);
@@ -73,18 +72,9 @@ class NotificationsScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: OutlinedButton.icon(
-              onPressed: () async {
-                await context.read<NotificationProvider>().sendNotification(
-                      title: isStaff
-                          ? '⚠️ New Reservation Needs Approval'
-                          : '✅ Reservation Status Updated',
-                      body: isStaff
-                          ? 'Customer John Doe has submitted a new reservation for review.'
-                          : 'Your reservation RES-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)} has been confirmed.',
-                    );
-              },
-              icon: const Icon(Icons.notifications_active_outlined, size: 16),
-              label: const Text('Trigger Test Notification'),
+              onPressed: () => context.read<NotificationProvider>().syncFromServer(),
+              icon: const Icon(Icons.sync_rounded, size: 16),
+              label: const Text('Check for updates'),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 44),
               ),
