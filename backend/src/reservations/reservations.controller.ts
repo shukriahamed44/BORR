@@ -17,6 +17,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -29,6 +30,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationStatusDto } from './dto/update-status.dto';
+import { QueryReservationsDto } from './dto/query-reservations.dto';
 import { ReservationsService } from './reservations.service';
 
 @ApiTags('Reservations')
@@ -49,10 +51,13 @@ export class ReservationsController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'List reservations (Filtered by user for CUSTOMER; all for STAFF/ADMIN)' })
-  @ApiResponse({ status: 200, description: 'List of reservations retrieved.' })
-  async findAll(@Request() req: any) {
-    return this.reservationsService.findAll(req.user);
+  @ApiOperation({
+    summary:
+      'List reservations with status filter and pagination (scoped to own rows for CUSTOMER; all for STAFF/ADMIN)',
+  })
+  @ApiResponse({ status: 200, description: 'Paginated reservations with per-status counts.' })
+  async findAll(@Request() req: any, @Query() query: QueryReservationsDto) {
+    return this.reservationsService.findAll(req.user, query);
   }
 
   @Get(':id')

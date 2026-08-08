@@ -35,6 +35,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { QueryProductsDto } from './dto/query-products.dto';
 import { ProductsService } from './products.service';
 
 @ApiTags('Equipment')
@@ -57,11 +58,13 @@ export class ProductsController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'List all equipment products with optional search query' })
-  @ApiQuery({ name: 'search', required: false, description: 'Filter by equipment name or SKU' })
-  @ApiResponse({ status: 200, description: 'List of equipment items retrieved.' })
-  async findAll(@Query('search') search?: string) {
-    return this.productsService.findAll(search);
+  @ApiOperation({
+    summary:
+      'List equipment with search, category / price filtering, sorting and pagination',
+  })
+  @ApiResponse({ status: 200, description: 'Paginated list of equipment items retrieved.' })
+  async findAll(@Query() query: QueryProductsDto) {
+    return this.productsService.findAll(query);
   }
 
   @Get(':id')

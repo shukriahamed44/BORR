@@ -121,8 +121,10 @@ project AmmuNation/
 
 | Role | Email | Password | Permissions |
 |---|---|---|---|
-| 👑 **Admin / Staff** | `admin.alex@ammunation.com` | `Password123!` | Full Admin Dashboard, Approval Workflows, Inventory Logs, QR Scanner |
-| 👤 **Customer** | `customer@example.com` | `Password123!` | Equipment Catalog, Booking Engine, My Reservations |
+| 👑 **Admin** | `admin@ammunation.com` | `Password123!` | Full Admin Dashboard, Approval Workflows, Inventory Logs, QR Scanner |
+| 🛡️ **Staff** | `staff@ammunation.com` | `Password123!` | Reservation Approvals, Equipment CRUD, Inventory Logs |
+| 📦 **Warehouse Operator** | `warehouse@ammunation.com` | `Password123!` | Receive/Release Equipment, Damages & Maintenance Logs |
+| 👤 **Customer** | `customer@ammunation.com` | `Password123!` | Equipment Catalog, Booking Engine, My Reservations |
 
 *Note: You can also create any new account on the Register screen on both Web & Mobile.*
 

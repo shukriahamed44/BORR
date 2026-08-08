@@ -16,11 +16,12 @@ import {
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
-import { ReservationStatus, Role } from '@prisma/client';
+import { Prisma, ReservationStatus, Role } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationStatusDto } from './dto/update-status.dto';
+import { QueryReservationsDto } from './dto/query-reservations.dto';
 
 @Injectable()
 export class ReservationsService implements OnModuleInit {
@@ -153,7 +154,13 @@ export class ReservationsService implements OnModuleInit {
 
     const updated = await this.prisma.reservation.update({
       where: { id },
-      data: { status: targetStatus },
+      data: {
+        status: targetStatus,
+        // Only meaningful on rejection; cleared on any other transition so a stale
+        // reason never lingers on an approved reservation.
+        rejectionReason:
+          targetStatus === ReservationStatus.REJECTED ? dto.rejectionReason ?? null : null,
+      },
       include: {
         user: { select: { id: true, name: true, email: true } },
         items: {
@@ -281,21 +288,59 @@ export class ReservationsService implements OnModuleInit {
   /**
    * Retrieves all reservations (Filtered by user for CUSTOMER role).
    */
-  async findAll(user: { id: string; role: Role }) {
-    const whereCondition = user.role === Role.CUSTOMER ? { userId: user.id } : {};
+  async findAll(user: { id: string; role: Role }, query: QueryReservationsDto = {}) {
+    const page = query.page ?? 1;
+    const limit = Math.min(query.limit ?? 10, 100);
 
-    const reservations = await this.prisma.reservation.findMany({
-      where: whereCondition,
-      include: {
-        user: { select: { id: true, name: true, email: true, role: true } },
-        items: { include: { product: true } },
-        payments: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const where: Prisma.ReservationWhereInput = {};
+
+    // Customers are hard-scoped to their own rows regardless of any query parameters.
+    if (user.role === Role.CUSTOMER) where.userId = user.id;
+    if (query.status) where.status = query.status;
+
+    if (query.search) {
+      where.OR = [
+        { id: { contains: query.search, mode: 'insensitive' } },
+        { user: { name: { contains: query.search, mode: 'insensitive' } } },
+        { user: { email: { contains: query.search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [total, reservations, grouped] = await Promise.all([
+      this.prisma.reservation.count({ where }),
+      this.prisma.reservation.findMany({
+        where,
+        include: {
+          user: { select: { id: true, name: true, email: true, role: true } },
+          items: { include: { product: true } },
+          payments: true,
+          uploads: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      // Per-status tallies for the UI tabs, scoped the same way but ignoring the
+      // status filter itself so every tab keeps showing its own count.
+      this.prisma.reservation.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+        where: user.role === Role.CUSTOMER ? { userId: user.id } : {},
+      }),
+    ]);
+
+    const statusCounts = grouped.reduce<Record<string, number>>((acc, row) => {
+      acc[row.status] = row._count._all;
+      return acc;
+    }, {});
 
     return {
       count: reservations.length,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+      statusCounts,
       reservations,
     };
   }

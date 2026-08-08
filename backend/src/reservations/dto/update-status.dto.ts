@@ -7,9 +7,9 @@
  * Defines the request payload when a staff member or customer updates a reservation's status (approving, rejecting, picking up, or returning equipment).
  */
 
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ReservationStatus } from '@prisma/client';
-import { IsEnum, IsNotEmpty } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateReservationStatusDto {
   @ApiProperty({
@@ -20,4 +20,14 @@ export class UpdateReservationStatusDto {
   @IsEnum(ReservationStatus, { message: 'Invalid reservation status transition.' })
   @IsNotEmpty()
   status!: ReservationStatus;
+
+  @ApiPropertyOptional({
+    description: 'Reason shown to the customer when a reservation is rejected',
+    example: 'Requested equipment is under maintenance for the selected dates.',
+    maxLength: 500,
+  })
+  @IsString()
+  @MaxLength(500)
+  @IsOptional()
+  rejectionReason?: string;
 }

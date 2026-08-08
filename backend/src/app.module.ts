@@ -1,10 +1,10 @@
 /**
  * FORMAL ARCHITECTURAL DESCRIPTION:
  * Root Application Module (`AppModule`).
- * Orchestrates and imports core domain feature modules (`PrismaModule`, `AuthModule`, `ProductsModule`, `ReservationsModule`, `InventoryModule`, `PaymentsModule`, `NotificationsModule`).
+ * Orchestrates and imports core domain feature modules (`PrismaModule`, `AuthModule`, `ProductsModule`, `ReservationsModule`, `InventoryModule`, `PaymentsModule`, `NotificationsModule`, `DashboardModule`).
  *
  * IN SIMPLE WORDS:
- * The main container module that combines Prisma Database, Auth Security, Equipment Product, Reservation Transaction, Warehouse Inventory, Payments, and Redis Notification Queue modules into one running app.
+ * The main container module that combines Prisma Database, Auth Security, Equipment Product, Reservation Transaction, Warehouse Inventory, Payments, Redis Notification Queue, and Dashboard Analytics modules into one running app.
  */
 
 import { Module } from '@nestjs/common';
@@ -17,16 +17,22 @@ import { ReservationsModule } from './reservations/reservations.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { PaymentsModule } from './payments/payments.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { CategoriesModule } from './categories/categories.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
     PrismaModule,
     AuthModule,
     ProductsModule,
+    CategoriesModule,
+    UploadsModule,
     ReservationsModule,
     InventoryModule,
     PaymentsModule,
     NotificationsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

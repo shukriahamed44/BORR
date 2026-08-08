@@ -38,43 +38,115 @@ enum InventoryAction {
   MAINTENANCE
 }
 
+enum UploadType {
+  IDENTITY_DOCUMENT
+  RENTAL_AGREEMENT
+  EQUIPMENT_IMAGE
+}
+
+enum UploadStatus {
+  PENDING_REVIEW
+  VERIFIED
+  REJECTED
+}
+
+enum NotificationType {
+  RESERVATION_APPROVED
+  RESERVATION_REJECTED
+  UPCOMING_RETURN
+  RESERVATION_EXPIRED
+  PAYMENT_RECEIVED
+  DOCUMENT_VERIFIED
+}
+
+enum ActivityAction {
+  LOGIN
+  RESERVATION_CREATED
+  RESERVATION_UPDATED
+  PAYMENT_PROCESSED
+  PAYMENT_REFUNDED
+  INVENTORY_CHANGED
+  DOCUMENT_UPLOADED
+  DOCUMENT_REVIEWED
+}
+
 model User {
   id            String         @id @default(uuid())
   email         String         @unique
   passwordHash  String
   name          String
+  phone         String?
   role          Role           @default(CUSTOMER)
   reservations  Reservation[]
   inventoryLogs InventoryLog[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+
+  uploads          Upload[]       @relation("UploadOwner")
+  reviewedUploads  Upload[]       @relation("UploadReviewer")
+  notifications    Notification[]
+  activityLogs     ActivityLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  iconKey     String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Product {
-  id               String            @id @default(uuid())
-  name             String
-  sku              String            @unique
-  description      String?
-  pricePerDay      Decimal
-  totalStock       Int
+  id          String  @id @default(uuid())
+  name        String
+  sku         String  @unique
+  description String?
+  pricePerDay Decimal
+  // Refundable security deposit held for the rental duration.
+  deposit     Decimal @default(0)
+  totalStock  Int
+  // Public path to the equipment photo, e.g. "/equipment/tl-drill-001.jpg".
+  imageUrl    String?
+  // Free-form technical specs, e.g. { "Power": "710W", "Weight": "2.1kg" }.
+  specifications Json?
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   reservationItems ReservationItem[]
   inventoryLogs    InventoryLog[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+
+  @@index([categoryId])
+  @@index([name])
 }
 
 model Reservation {
-  id         String            @id @default(uuid())
-  userId     String
-  user       User              @relation(fields: [userId], references: [id])
-  status     ReservationStatus @default(PENDING)
-  startDate  DateTime
-  endDate    DateTime
-  totalPrice Decimal
-  items      ReservationItem[]
-  payments   Payment[]
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
+  id              String            @id @default(uuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  status          ReservationStatus @default(PENDING)
+  startDate       DateTime
+  endDate         DateTime
+  totalPrice      Decimal
+  // Populated when staff reject a request, so the customer sees why.
+  rejectionReason String?
+  items           ReservationItem[]
+  payments        Payment[]
+  uploads         Upload[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([endDate])
 }
 
 model ReservationItem {
@@ -93,8 +165,15 @@ model Payment {
   reservation   Reservation   @relation(fields: [reservationId], references: [id])
   amount        Decimal
   status        PaymentStatus @default(PENDING)
+  // Gateway reference. With the Stripe-shaped adapter this holds the PaymentIntent id.
   transactionId String?
+  provider      String?       @default("mock_stripe")
+  failureReason String?
+  refundedAt    DateTime?
   createdAt     DateTime      @default(now())
+
+  @@index([reservationId])
+  @@index([status])
 }
 
 model InventoryLog {
@@ -107,4 +186,78 @@ model InventoryLog {
   quantity   Int
   notes      String?
   timestamp  DateTime        @default(now())
+
+  @@index([productId])
+  @@index([timestamp])
+}
+
+/// Uploaded customer documents and equipment imagery.
+/// `storageKey` is driver-relative (local disk today, S3/R2 later) rather than an
+/// absolute path, so the storage backend can be swapped without rewriting rows.
+model Upload {
+  id           String       @id @default(uuid())
+  type         UploadType
+  status       UploadStatus @default(PENDING_REVIEW)
+  originalName String
+  storageKey   String
+  mimeType     String
+  sizeBytes    Int
+
+  ownerId String
+  owner   User   @relation("UploadOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  reservationId String?
+  reservation   Reservation? @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  reviewedById   String?
+  reviewedBy     User?     @relation("UploadReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt     DateTime?
+  rejectionNote  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([reservationId])
+  @@index([status])
+}
+
+/// Persisted user-facing notification feed, written by the BullMQ workers.
+model Notification {
+  id     String           @id @default(uuid())
+  userId String
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type   NotificationType
+  title  String
+  body   String
+
+  // Loose reference to the originating record; intentionally not a FK so history
+  // survives deletion of the entity that triggered it.
+  entityType String?
+  entityId   String?
+
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+  @@index([createdAt])
+}
+
+/// Immutable audit trail: login, reservation, payment and inventory events.
+model ActivityLog {
+  id     String         @id @default(uuid())
+  userId String?
+  user   User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action ActivityAction
+
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
 }

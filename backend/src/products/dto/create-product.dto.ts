@@ -9,7 +9,15 @@
  */
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+} from 'class-validator';
 
 export class CreateProductDto {
   @ApiProperty({
@@ -53,4 +61,38 @@ export class CreateProductDto {
   @IsNumber()
   @Min(0, { message: 'Total stock cannot be negative.' })
   totalStock!: number;
+
+  @ApiPropertyOptional({
+    description: 'Refundable security deposit held for the rental duration, in USD',
+    example: 250,
+    minimum: 0,
+  })
+  @IsNumber()
+  @Min(0, { message: 'Deposit cannot be negative.' })
+  @IsOptional()
+  deposit?: number;
+
+  @ApiPropertyOptional({
+    description: 'UUID of the category this equipment belongs to',
+    example: 'a3f1c2d4-5678-4abc-9def-0123456789ab',
+  })
+  @IsUUID('4', { message: 'categoryId must be a valid UUID.' })
+  @IsOptional()
+  categoryId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Public path to the equipment image',
+    example: '/equipment/tl-drill-001.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  imageUrl?: string;
+
+  @ApiPropertyOptional({
+    description: 'Key/value technical specifications',
+    example: { Motor: '10.0 Amp', Weight: '6.7 lbs' },
+  })
+  @IsObject()
+  @IsOptional()
+  specifications?: Record<string, string>;
 }
