@@ -1,17 +1,20 @@
 /**
  * FORMAL ARCHITECTURAL DESCRIPTION:
  * Customer Bottom Navigation Shell (`customer_shell.dart`).
- * StatefulWidget wrapping the customer-facing screens in a persistent bottom
- * navigation bar with tabs for Catalog, Reservations, and Notifications.
+ * Wraps the customer-facing screens in the shared floating frosted tab bar with
+ * tabs for Catalog, Reservations, and Notifications (unread-badged).
  * Uses GoRouter ShellRoute — child is the active tab's screen.
  *
  * IN SIMPLE WORDS:
- * The bottom navigation bar that customers see with Catalog, Reservations, and Notification tabs.
+ * The floating tab bar customers see, with Catalog, Reservations and Notifications.
  */
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/theme/app_theme.dart';
+import 'package:provider/provider.dart';
+
+import '../../features/notifications/providers/notification_provider.dart';
+import '../widgets/app_tab_bar.dart';
 
 class CustomerShell extends StatelessWidget {
   final Widget child;
@@ -26,46 +29,37 @@ class CustomerShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final idx = _selectedIndex(context);
+    final unread = context.select<NotificationProvider, int>((n) => n.unreadCount);
+    final tabs = [
+      const AppTab(
+        icon: Icons.grid_view_outlined,
+        activeIcon: Icons.grid_view_rounded,
+        label: 'Catalog',
+        route: '/catalog',
+      ),
+      const AppTab(
+        icon: Icons.receipt_long_outlined,
+        activeIcon: Icons.receipt_long_rounded,
+        label: 'Bookings',
+        route: '/reservations',
+      ),
+      AppTab(
+        icon: Icons.notifications_none_rounded,
+        activeIcon: Icons.notifications_rounded,
+        label: 'Alerts',
+        route: '/notifications',
+        badge: unread,
+      ),
+    ];
+
     return Scaffold(
+      // The tab bar floats, so content runs beneath it.
+      extendBody: true,
       body: child,
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: AppTheme.borderSubtle)),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: idx,
-          onTap: (i) {
-            switch (i) {
-              case 0:
-                context.go('/catalog');
-                break;
-              case 1:
-                context.go('/reservations');
-                break;
-              case 2:
-                context.go('/notifications');
-                break;
-            }
-          },
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.grid_view_rounded),
-              activeIcon: Icon(Icons.grid_view_rounded),
-              label: 'Catalog',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long_outlined),
-              activeIcon: Icon(Icons.receipt_long_rounded),
-              label: 'Reservations',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.notifications_outlined),
-              activeIcon: Icon(Icons.notifications_rounded),
-              label: 'Notifications',
-            ),
-          ],
-        ),
+      bottomNavigationBar: AppTabBar(
+        tabs: tabs,
+        currentIndex: _selectedIndex(context),
+        onTap: (i) => context.go(tabs[i].route),
       ),
     );
   }

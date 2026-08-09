@@ -1,18 +1,22 @@
 /**
  * FORMAL ARCHITECTURAL DESCRIPTION:
  * Login Screen — JWT Authentication Entry Point (`login_screen.dart`).
- * Renders email/password form, delegates to AuthProvider.login(), and displays
- * inline error messages. On success GoRouter's redirect navigates by role.
+ * Renders the BORR brand header over a frosted credential sheet, delegates to
+ * AuthProvider.login(), and surfaces inline validation and API errors. On success
+ * GoRouter's redirect navigates by role.
  *
  * IN SIMPLE WORDS:
- * The login page — beautiful dark form where users enter email and password
- * to get their JWT tokens stored securely and access the app.
+ * The sign-in page — brand banner on top, frosted glass form below, where users
+ * enter email and password to get in.
  */
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
+
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/glass.dart';
 import '../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -45,213 +49,242 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.bgDeep,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ─── Logo ──────────────────────────────────────────────────
-              Center(
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.primary, AppTheme.primaryLight],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primary.withOpacity(0.35),
-                        blurRadius: 24,
-                        spreadRadius: 4,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.inventory_2_rounded,
-                    color: Colors.white,
-                    size: 36,
-                  ),
-                ),
-              )
-                  .animate()
-                  .scale(duration: 600.ms, curve: Curves.elasticOut),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        body: Stack(
+          children: [
+            // ─── Brand header ─────────────────────────────────────────────
+            const _BrandHeader(),
 
-              const SizedBox(height: 40),
-
-              // ─── Heading ───────────────────────────────────────────────
-              Text(
-                'Welcome Back',
-                style: Theme.of(context).textTheme.headlineLarge,
-              ).animate().fadeIn(delay: 200.ms).slideX(begin: -0.1, end: 0),
-              const SizedBox(height: 8),
-              Text(
-                'Sign in to your AmmuNation account',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ).animate().fadeIn(delay: 300.ms),
-
-              const SizedBox(height: 40),
-
-              // ─── Form ──────────────────────────────────────────────────
-              Form(
-                key: _formKey,
+            // ─── Credential sheet ─────────────────────────────────────────
+            SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 150, 20, 32),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Email
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      autocorrect: false,
-                      style: const TextStyle(color: AppTheme.textPrimary),
-                      decoration: const InputDecoration(
-                        labelText: 'Email Address',
-                        hintText: 'you@example.com',
-                        prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textMuted),
-                      ),
-                      validator: (v) =>
-                          (v?.isEmpty ?? true) ? 'Email is required' : null,
-                    ).animate(delay: 400.ms).fadeIn().slideY(begin: 0.1, end: 0),
-
-                    const SizedBox(height: 16),
-
-                    // Password
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      style: const TextStyle(color: AppTheme.textPrimary),
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        hintText: '••••••••',
-                        prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textMuted),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            color: AppTheme.textMuted,
-                          ),
-                          onPressed: () =>
-                              setState(() => _obscurePassword = !_obscurePassword),
-                        ),
-                      ),
-                      validator: (v) =>
-                          (v?.isEmpty ?? true) ? 'Password is required' : null,
-                    ).animate(delay: 500.ms).fadeIn().slideY(begin: 0.1, end: 0),
-
-                    const SizedBox(height: 24),
-
-                    // ─── Error Banner ────────────────────────────────────
-                    Consumer<AuthProvider>(
-                      builder: (_, auth, __) {
-                        if (auth.errorMessage == null) return const SizedBox.shrink();
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: AppTheme.danger.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppTheme.danger.withOpacity(0.3),
+                    GlassPanel(
+                      padding: const EdgeInsets.fromLTRB(22, 26, 22, 26),
+                      radius: AppTheme.radiusLg,
+                      fill: AppTheme.glassFillStrong,
+                      shadow: AppTheme.shadowLifted,
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text('Welcome back',
+                                style: Theme.of(context).textTheme.headlineLarge),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Sign in to manage your rentals.',
+                              style: Theme.of(context).textTheme.bodyMedium,
                             ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.error_outline,
-                                  color: AppTheme.danger, size: 18),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  auth.errorMessage!,
-                                  style: const TextStyle(
-                                      color: AppTheme.danger, fontSize: 13),
+                            const SizedBox(height: 26),
+
+                            TextFormField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              autocorrect: false,
+                              textInputAction: TextInputAction.next,
+                              decoration: const InputDecoration(
+                                labelText: 'Email',
+                                hintText: 'you@example.com',
+                                prefixIcon: Icon(Icons.alternate_email_rounded,
+                                    color: AppTheme.textMuted, size: 20),
+                              ),
+                              validator: (v) =>
+                                  (v?.isEmpty ?? true) ? 'Email is required' : null,
+                            ),
+                            const SizedBox(height: 14),
+
+                            TextFormField(
+                              controller: _passwordController,
+                              obscureText: _obscurePassword,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) => _handleLogin(),
+                              decoration: InputDecoration(
+                                labelText: 'Password',
+                                hintText: '••••••••',
+                                prefixIcon: const Icon(Icons.lock_outline_rounded,
+                                    color: AppTheme.textMuted, size: 20),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                    color: AppTheme.textMuted,
+                                    size: 20,
+                                  ),
+                                  onPressed: () => setState(
+                                      () => _obscurePassword = !_obscurePassword),
                                 ),
                               ),
-                            ],
-                          ),
-                        ).animate().fadeIn().slideY(begin: -0.1, end: 0);
-                      },
-                    ),
+                              validator: (v) =>
+                                  (v?.isEmpty ?? true) ? 'Password is required' : null,
+                            ),
 
-                    // ─── Sign In Button ───────────────────────────────────
-                    Consumer<AuthProvider>(
-                      builder: (_, auth, __) => ElevatedButton(
-                        onPressed: auth.isLoading ? null : _handleLogin,
-                        child: auth.isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text('Sign In'),
+                            const SizedBox(height: 20),
+
+                            Consumer<AuthProvider>(
+                              builder: (_, auth, __) {
+                                if (auth.errorMessage == null) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  padding: const EdgeInsets.all(13),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.danger.withOpacity(0.08),
+                                    borderRadius:
+                                        BorderRadius.circular(AppTheme.radiusSm),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.error_outline_rounded,
+                                          color: AppTheme.danger, size: 18),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          auth.errorMessage!,
+                                          style: const TextStyle(
+                                              color: AppTheme.danger, fontSize: 13),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ).animate().fadeIn().slideY(begin: -0.15, end: 0);
+                              },
+                            ),
+
+                            Consumer<AuthProvider>(
+                              builder: (_, auth, __) => PrimaryButton(
+                                label: 'Sign In',
+                                loading: auth.isLoading,
+                                onPressed: _handleLogin,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ).animate(delay: 600.ms).fadeIn().slideY(begin: 0.1, end: 0),
+                    )
+                        .animate()
+                        .fadeIn(duration: 500.ms)
+                        .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic),
+
+                    const SizedBox(height: 18),
+                    const _DemoCredentials()
+                        .animate(delay: 500.ms)
+                        .fadeIn(duration: 400.ms),
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-              const SizedBox(height: 32),
+class _BrandHeader extends StatelessWidget {
+  const _BrandHeader();
 
-              // ─── Role hint ─────────────────────────────────────────────
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.bgSurface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.borderSubtle),
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 300,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.primaryLight, AppTheme.primary, AppTheme.primaryDark],
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(top: 26),
+          child: Column(
+            children: [
+              Image.asset('assets/images/mainLogo.png', width: 132)
+                  .animate()
+                  .fadeIn(duration: 500.ms)
+                  .slideY(begin: -0.2, end: 0),
+              const SizedBox(height: 8),
+              const Text(
+                'BORROW BIG. OWN SMALL.',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.6,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Demo Credentials',
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelLarge
-                          ?.copyWith(color: AppTheme.textMuted, fontSize: 12),
-                    ),
-                    const SizedBox(height: 8),
-                    _credRow('Customer', 'customer@example.com'),
-                    _credRow('Staff', 'staff@example.com'),
-                  ],
-                ),
-              ).animate(delay: 800.ms).fadeIn(),
+              ).animate(delay: 200.ms).fadeIn(),
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _credRow(String role, String email) {
+class _DemoCredentials extends StatelessWidget {
+  const _DemoCredentials();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.key_rounded, size: 14, color: AppTheme.textMuted),
+              const SizedBox(width: 6),
+              Text('Demo accounts · Password123!',
+                  style: Theme.of(context).textTheme.labelSmall),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const _CredRow('Customer', 'customer@ammunation.com'),
+          const _CredRow('Staff', 'staff@ammunation.com'),
+          const _CredRow('Admin', 'admin@ammunation.com'),
+        ],
+      ),
+    );
+  }
+}
+
+class _CredRow extends StatelessWidget {
+  final String role;
+  final String email;
+  const _CredRow(this.role, this.email);
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(role,
-                style: const TextStyle(
-                    color: AppTheme.primaryLight,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600)),
-          ),
-          const SizedBox(width: 8),
-          Text(email,
+          SizedBox(
+            width: 74,
+            child: Text(
+              role,
               style: const TextStyle(
-                  color: AppTheme.textSecondary, fontSize: 12)),
+                color: AppTheme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Text(email,
+              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12.5)),
         ],
       ),
     );

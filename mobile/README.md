@@ -20,6 +20,19 @@ Talks to the NestJS backend over REST (`/api/v1`) with JWT bearer auth.
 - Check equipment out (`ACTIVE`) and back in (`RETURNED`)
 - Scan equipment QR codes with the device camera
 
+## Design
+
+Apple-flavoured light UI built on the BORR brand: `#2563EB` blue on a soft
+`#F2F5F9` page, white cards with a single soft shadow, and frosted glass
+(`BackdropFilter`) for the floating tab bar, overlay buttons and the sign-in
+sheet. Typography is CreatoDisplay, bundled in `assets/fonts` so it renders
+identically offline.
+
+Every colour, radius, shadow and text style is a token in
+`lib/core/theme/app_theme.dart` — screens reference the theme, never raw hex.
+Shared surfaces (`GlassPanel`, `AppCard`, `PrimaryButton`, `GlassIconButton`,
+`StatusPill`, `EmptyState`) live in `lib/shared/widgets/glass.dart`.
+
 ## Architecture
 
 ```

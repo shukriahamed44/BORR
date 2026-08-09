@@ -19,6 +19,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/models.dart';
+import '../../../shared/widgets/glass.dart';
 
 class StaffEquipmentScreen extends StatefulWidget {
   final String productId;
@@ -109,7 +110,7 @@ class _StaffEquipmentScreenState extends State<StaffEquipmentScreen> {
       appBar: AppBar(
         title: Text(_product?.name ?? 'Equipment'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => context.pop(),
         ),
         actions: [
@@ -122,47 +123,44 @@ class _StaffEquipmentScreenState extends State<StaffEquipmentScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline_rounded,
-                          color: AppTheme.danger, size: 40),
-                      const SizedBox(height: 12),
-                      Text(_error!, style: const TextStyle(color: AppTheme.textMuted)),
-                      const SizedBox(height: 16),
-                      ElevatedButton(onPressed: _load, child: const Text('Retry')),
-                    ],
-                  ),
+              ? EmptyState(
+                  icon: Icons.error_outline_rounded,
+                  title: 'Could not load this item',
+                  message: _error,
+                  actionLabel: 'Retry',
+                  onAction: _load,
                 )
               : RefreshIndicator(
                   onRefresh: _load,
                   color: AppTheme.primary,
                   child: ListView(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
                     children: [
                       _buildIdentityCard(),
                       const SizedBox(height: 24),
-                      Text('Current Holders',
-                          style: Theme.of(context).textTheme.titleMedium),
+                      Text('Current holders',
+                          style: Theme.of(context).textTheme.headlineSmall),
                       const SizedBox(height: 12),
                       if (_holders.isEmpty)
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: AppTheme.bgSurface,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppTheme.borderSubtle),
-                          ),
-                          child: const Row(
+                        AppCard(
+                          padding: const EdgeInsets.all(18),
+                          child: Row(
                             children: [
-                              Icon(Icons.check_circle_outline,
-                                  color: AppTheme.accent, size: 20),
-                              SizedBox(width: 10),
+                              Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.accent.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                                ),
+                                child: const Icon(Icons.check_circle_outline,
+                                    color: AppTheme.accent, size: 19),
+                              ),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  'No active or approved reservation holds this item — it is on the shelf.',
-                                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                                  'On the shelf — no approved or active booking holds this item.',
+                                  style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ),
                             ],
@@ -178,13 +176,8 @@ class _StaffEquipmentScreenState extends State<StaffEquipmentScreen> {
 
   Widget _buildIdentityCard() {
     final p = _product!;
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.bgSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.borderSubtle),
-      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -192,7 +185,8 @@ class _StaffEquipmentScreenState extends State<StaffEquipmentScreen> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              border: Border.all(color: AppTheme.borderSubtle),
             ),
             child: QrImageView(
               data: 'ammunation:product:${p.id}',
@@ -206,32 +200,23 @@ class _StaffEquipmentScreenState extends State<StaffEquipmentScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(p.name,
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16)),
-                const SizedBox(height: 4),
+                Text(p.name, style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 3),
                 Text('SKU ${p.sku.isEmpty ? '—' : p.sku}',
-                    style: const TextStyle(
-                        color: AppTheme.textMuted, fontSize: 12, fontFamily: 'monospace')),
+                    style: Theme.of(context).textTheme.labelSmall),
                 if (p.categoryName != null) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(p.categoryName!,
-                      style: const TextStyle(color: AppTheme.primaryLight, fontSize: 12)),
+                      style: const TextStyle(
+                          color: AppTheme.primary,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600)),
                 ],
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.inventory_2_rounded,
-                        size: 14, color: p.inStock ? AppTheme.accent : AppTheme.danger),
-                    const SizedBox(width: 6),
-                    Text('${p.totalStock} in stock',
-                        style: TextStyle(
-                            color: p.inStock ? AppTheme.accent : AppTheme.danger,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600)),
-                  ],
+                const SizedBox(height: 10),
+                StatusPill(
+                  label: '${p.totalStock} in stock',
+                  color: p.inStock ? AppTheme.accent : AppTheme.danger,
+                  icon: Icons.inventory_2_rounded,
                 ),
               ],
             ),
@@ -250,75 +235,74 @@ class _StaffEquipmentScreenState extends State<StaffEquipmentScreen> {
         .where((i) => i.productId == widget.productId)
         .fold<int>(0, (sum, i) => sum + i.quantity);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.bgSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(r.customerName ?? 'Customer',
-                        style: const TextStyle(
-                            color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                    Text('RES-${r.id.substring(0, 8).toUpperCase()} · $qty unit(s)',
-                        style: const TextStyle(color: AppTheme.textMuted, fontSize: 11)),
-                  ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 19,
+                  backgroundColor: AppTheme.bgElevated,
+                  child: Text(
+                    (r.customerName ?? 'C').characters.first.toUpperCase(),
+                    style: const TextStyle(
+                      color: AppTheme.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(r.customerName ?? 'Customer',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 2),
+                      Text('BORR-${r.id.substring(0, 8).toUpperCase()} · $qty unit(s)',
+                          style: Theme.of(context).textTheme.labelSmall),
+                    ],
+                  ),
                 ),
-                child: Text(AppConstants.statusLabels[r.status] ?? r.status,
-                    style: TextStyle(
-                        color: statusColor, fontSize: 11, fontWeight: FontWeight.w600)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Icon(Icons.calendar_today_outlined, size: 13, color: AppTheme.textMuted),
-              const SizedBox(width: 6),
-              Text('${_fmt.format(r.startDate)} → ${_fmt.format(r.endDate)}',
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (canCheckOut)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _updateStatus(r, 'ACTIVE'),
-                icon: const Icon(Icons.outbox_rounded, size: 16),
-                label: const Text('Check Out to Customer'),
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
-              ),
+                StatusPill(
+                  label: AppConstants.statusLabels[r.status] ?? r.status,
+                  color: statusColor,
+                ),
+              ],
             ),
-          if (canCheckIn)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _updateStatus(r, 'RETURNED'),
-                icon: const Icon(Icons.assignment_turned_in_outlined, size: 16),
-                label: const Text('Check In Return'),
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
-              ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.calendar_today_rounded, size: 13, color: AppTheme.textMuted),
+                const SizedBox(width: 8),
+                Text('${_fmt.format(r.startDate)}  →  ${_fmt.format(r.endDate)}',
+                    style: Theme.of(context).textTheme.bodyMedium),
+              ],
             ),
-        ],
+            if (canCheckOut || canCheckIn) ...[
+              const SizedBox(height: 14),
+              if (canCheckOut)
+                PrimaryButton(
+                  label: 'Check out to customer',
+                  icon: Icons.outbox_rounded,
+                  onPressed: () => _updateStatus(r, 'ACTIVE'),
+                ),
+              if (canCheckIn)
+                PrimaryButton(
+                  label: 'Check in return',
+                  icon: Icons.assignment_turned_in_outlined,
+                  color: AppTheme.accent,
+                  onPressed: () => _updateStatus(r, 'RETURNED'),
+                ),
+            ],
+          ],
+        ),
       ),
     );
   }

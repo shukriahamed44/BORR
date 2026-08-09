@@ -1,22 +1,23 @@
 /**
  * FORMAL ARCHITECTURAL DESCRIPTION:
- * Push Notification Inbox Screen (`notifications_screen.dart`).
- * Displays the notification inbox for both Customer and Staff roles.
- * Shows time-relative timestamps, read/unread states, and a "Mark All Read" action.
- * Includes a test button to trigger a local push notification (demo purposes).
+ * Notification Inbox Screen (`notifications_screen.dart`).
+ * Renders the alert inbox for both Customer and Staff roles — relative
+ * timestamps, unread emphasis, a manual sync against the reservations feed and a
+ * mark-all-read action.
  *
  * IN SIMPLE WORDS:
- * The notifications inbox — shows all received push alerts with time stamps
- * and lets you clear them as read.
+ * The alerts page — every booking update the app has told you about, newest first.
  */
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
 import '../../../core/theme/app_theme.dart';
-import '../providers/notification_provider.dart';
 import '../../../shared/models/models.dart';
+import '../../../shared/widgets/glass.dart';
+import '../providers/notification_provider.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
@@ -26,6 +27,7 @@ class NotificationsScreen extends StatelessWidget {
     if (diff.inMinutes < 1) return 'Just now';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
     return DateFormat('dd MMM').format(dt);
   }
 
@@ -35,83 +37,78 @@ class NotificationsScreen extends StatelessWidget {
     final notifications = provider.notifications;
 
     return Scaffold(
-      backgroundColor: AppTheme.bgDeep,
-      appBar: AppBar(
-        title: Row(
+      body: SafeArea(
+        bottom: false,
+        child: Column(
           children: [
-            const Text('Notifications'),
-            if (provider.unreadCount > 0) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '${provider.unreadCount}',
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          if (provider.unreadCount > 0)
-            TextButton(
-              onPressed: provider.markAllRead,
-              child: const Text('Mark all read',
-                  style: TextStyle(color: AppTheme.primary, fontSize: 13)),
-            ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // ─── Test Notification Button (Demo) ──────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: OutlinedButton.icon(
-              onPressed: () => context.read<NotificationProvider>().syncFromServer(),
-              icon: const Icon(Icons.sync_rounded, size: 16),
-              label: const Text('Check for updates'),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 44),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // ─── Notification List ────────────────────────────────────────
-          Expanded(
-            child: notifications.isEmpty
-                ? const Center(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+              child: Row(
+                children: [
+                  Expanded(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.notifications_none_rounded,
-                            color: AppTheme.textMuted, size: 48),
-                        SizedBox(height: 16),
-                        Text('No notifications yet.',
-                            style: TextStyle(color: AppTheme.textMuted)),
+                        Text('Alerts',
+                            style: Theme.of(context).textTheme.displayMedium),
+                        const SizedBox(height: 2),
+                        Text(
+                          provider.unreadCount > 0
+                              ? '${provider.unreadCount} unread'
+                              : 'You are all caught up',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
                       ],
                     ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: notifications.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (_, i) {
-                      final n = notifications[i];
-                      return _NotificationTile(
-                        notification: n,
-                        relativeTime: _relativeTime(n.receivedAt),
-                        index: i,
-                      );
-                    },
                   ),
-          ),
-        ],
+                  GlassIconButton(
+                    icon: Icons.sync_rounded,
+                    onPressed: provider.syncFromServer,
+                  ),
+                ],
+              ),
+            ),
+
+            if (provider.unreadCount > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: provider.markAllRead,
+                    icon: const Icon(Icons.done_all_rounded, size: 17),
+                    label: const Text('Mark all read'),
+                  ),
+                ),
+              ),
+
+            Expanded(
+              child: notifications.isEmpty
+                  ? const EmptyState(
+                      icon: Icons.notifications_none_rounded,
+                      title: 'No alerts yet',
+                      message:
+                          'Approvals, rejections and return reminders land here automatically.',
+                    )
+                  : RefreshIndicator(
+                      onRefresh: provider.syncFromServer,
+                      color: AppTheme.primary,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                        itemCount: notifications.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (_, i) => _NotificationTile(
+                          notification: notifications[i],
+                          relativeTime: _relativeTime(notifications[i].receivedAt),
+                        )
+                            .animate(delay: Duration(milliseconds: i * 50))
+                            .fadeIn(duration: 280.ms)
+                            .slideY(begin: 0.06, end: 0),
+                      ),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -120,86 +117,67 @@ class NotificationsScreen extends StatelessWidget {
 class _NotificationTile extends StatelessWidget {
   final NotificationModel notification;
   final String relativeTime;
-  final int index;
 
-  const _NotificationTile({
-    required this.notification,
-    required this.relativeTime,
-    required this.index,
-  });
+  const _NotificationTile({required this.notification, required this.relativeTime});
+
+  /// Icon and tint are derived from the alert's subject so the inbox scans quickly.
+  (IconData, Color) get _visual {
+    final title = notification.title.toLowerCase();
+    if (title.contains('approved')) return (Icons.check_circle_rounded, AppTheme.accent);
+    if (title.contains('rejected')) return (Icons.cancel_rounded, AppTheme.danger);
+    if (title.contains('expired')) return (Icons.history_toggle_off_rounded, AppTheme.danger);
+    if (title.contains('upcoming')) return (Icons.schedule_rounded, AppTheme.warning);
+    if (title.contains('checked out')) return (Icons.outbox_rounded, AppTheme.primary);
+    if (title.contains('return')) return (Icons.assignment_turned_in_rounded, AppTheme.accent);
+    return (Icons.notifications_rounded, AppTheme.primary);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final n = notification;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: n.isRead ? AppTheme.bgSurface : AppTheme.bgSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: n.isRead ? AppTheme.borderSubtle : AppTheme.primary.withOpacity(0.35),
-          width: n.isRead ? 1 : 1.5,
-        ),
-      ),
+    final (icon, color) = _visual;
+    final unread = !notification.isRead;
+
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      border: unread
+          ? Border.all(color: AppTheme.primary.withOpacity(0.25), width: 1.2)
+          : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ─── Icon ──────────────────────────────────────────────────
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: n.isRead
-                  ? AppTheme.bgElevated
-                  : AppTheme.primary.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10),
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             ),
-            child: Icon(
-              n.isRead
-                  ? Icons.notifications_outlined
-                  : Icons.notifications_active_rounded,
-              color: n.isRead ? AppTheme.textMuted : AppTheme.primary,
-              size: 20,
-            ),
+            child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(width: 12),
-          // ─── Content ────────────────────────────────────────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: Text(
-                        n.title,
-                        style: TextStyle(
-                          color: n.isRead ? AppTheme.textSecondary : AppTheme.textPrimary,
-                          fontWeight: n.isRead ? FontWeight.w400 : FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
+                      child: Text(notification.title,
+                          style: Theme.of(context).textTheme.titleLarge),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      relativeTime,
-                      style: const TextStyle(color: AppTheme.textMuted, fontSize: 11),
-                    ),
+                    Text(relativeTime,
+                        style: Theme.of(context).textTheme.labelSmall),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  n.body,
-                  style: const TextStyle(color: AppTheme.textMuted, fontSize: 13, height: 1.4),
-                ),
+                const SizedBox(height: 3),
+                Text(notification.body,
+                    style: Theme.of(context).textTheme.bodyMedium),
               ],
             ),
           ),
-          // ─── Unread Dot ──────────────────────────────────────────────
-          if (!n.isRead)
+          if (unread)
             Container(
-              margin: const EdgeInsets.only(left: 8, top: 2),
+              margin: const EdgeInsets.only(left: 8, top: 6),
               width: 8,
               height: 8,
               decoration: const BoxDecoration(
@@ -209,6 +187,6 @@ class _NotificationTile extends StatelessWidget {
             ),
         ],
       ),
-    ).animate(delay: Duration(milliseconds: index * 60)).fadeIn().slideX(begin: 0.05, end: 0);
+    );
   }
 }

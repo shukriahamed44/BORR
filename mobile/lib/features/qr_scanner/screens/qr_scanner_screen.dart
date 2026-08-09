@@ -12,9 +12,11 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/glass.dart';
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
@@ -85,28 +87,18 @@ class _QrScannerScreenState extends State<QrScannerScreen> with WidgetsBindingOb
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: const Text('QR Code Scanner'),
-        actions: [
-          IconButton(
-            icon: ValueListenableBuilder(
-              valueListenable: _controller,
-              builder: (_, state, __) {
-                final torchEnabled = state.torchState == TorchState.on;
-                return Icon(
-                  torchEnabled ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-                  color: torchEnabled ? AppTheme.warning : AppTheme.textMuted,
-                );
-              },
-            ),
-            onPressed: () => _controller.toggleTorch(),
-          ),
-        ],
+    // A viewfinder is the one screen that stays dark — light chrome over the
+    // camera feed would wash out the preview.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
       ),
-      body: Stack(
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        extendBodyBehindAppBar: true,
+        body: Stack(
         children: [
           // ─── Camera View ───────────────────────────────────────────────
           MobileScanner(
@@ -117,28 +109,52 @@ class _QrScannerScreenState extends State<QrScannerScreen> with WidgetsBindingOb
           // ─── Scan Overlay ──────────────────────────────────────────────
           _ScanOverlay(),
 
+          // ─── Floating controls ─────────────────────────────────────────
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Scan equipment tag',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  ValueListenableBuilder(
+                    valueListenable: _controller,
+                    builder: (_, state, __) {
+                      final torchOn = state.torchState == TorchState.on;
+                      return GlassIconButton(
+                        icon: torchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                        foreground: torchOn ? AppTheme.warning : Colors.white,
+                        onPressed: () => _controller.toggleTorch(),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           // ─── Bottom Instruction ────────────────────────────────────────
           Positioned(
-            bottom: 48,
+            bottom: 110,
             left: 0,
             right: 0,
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Align QR code within the frame',
-                    style: TextStyle(color: Colors.white, fontSize: 14),
-                  ),
-                ),
-              ],
+            child: Center(
+              child: GlassButton(
+                label: 'Align the QR code in the frame',
+                icon: Icons.qr_code_2_rounded,
+                foreground: Colors.white,
+              ),
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -194,9 +210,9 @@ class _ScanFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const cornerSize = 24.0;
-    const borderWidth = 3.0;
-    const color = AppTheme.primary;
+    const cornerSize = 26.0;
+    const borderWidth = 3.5;
+    const color = Colors.white;
 
     return SizedBox(
       width: size,

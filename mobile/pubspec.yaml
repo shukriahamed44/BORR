@@ -34,7 +34,6 @@ dependencies:
   go_router: ^14.6.1                   # Declarative role-aware routing
 
   # ─── UI & Design ───────────────────────────────────────────────────────────
-  google_fonts: ^6.2.1                 # Premium typography (Inter font)
   flutter_animate: ^4.5.0             # Micro-animations and transitions
   cached_network_image: ^3.4.1        # Efficient image loading & caching
   shimmer: ^3.0.0                      # Loading skeleton placeholders
@@ -61,3 +60,14 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+
+  # BORR brand typeface, bundled so the UI renders identically offline.
+  fonts:
+    - family: CreatoDisplay
+      fonts:
+        - asset: assets/fonts/CreatoDisplay-Regular.otf
+          weight: 400
+        - asset: assets/fonts/CreatoDisplay-Medium.otf
+          weight: 500
+        - asset: assets/fonts/CreatoDisplay-Bold.otf
+          weight: 700
