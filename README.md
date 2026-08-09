@@ -143,7 +143,7 @@ project AmmuNation/
 
 - [x] **Source Code**: Backend (NestJS), Web (`frontend/`, Vite + React), Mobile (Flutter).
 - [x] **README & Deployment Instructions**: this document, plus `RUNBOOK.md` for environment setup.
-- [x] **ER Diagram**: `erp_diagram.md` — Mermaid ERD + reservation state machine, rendered inline (no external image).
+- [x] **ER Diagram**: `ER diagram.png` in the README, plus `erp_diagram.md` — Mermaid ERD + reservation state machine.
 - [x] **API Documentation**: Swagger at `http://localhost:3000/api/docs`, plus the endpoint tables below.
 - [x] **Database Script & Migrations**: `backend/prisma/migrations/` (3 migrations), applied with `npx prisma migrate deploy`.
 - [x] **Sample Data**: `npm run seed` (full reset) and `prisma/seed-catalog.ts` (idempotent, 6 categories + 16 products).
@@ -282,6 +282,8 @@ All routes are versioned under **`/api/v1`**. List endpoints return an envelope
 ---
 
 ## 📊 Database ER Diagram
+
+![AmmuNation database ER diagram](ER%20diagram.png)
 
 The schema comprises **10 entity models** with foreign keys, cascade rules and indexes.
 Roles are modelled as a PostgreSQL **enum** on `User.role` (`ADMIN`, `STAFF`, `CUSTOMER`,
