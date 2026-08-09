@@ -4,6 +4,8 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
+  /** Optional contact number, editable from Settings. */
+  phone?: string | null;
   role: Role;
   avatarUrl?: string;
   unreadNotificationsCount?: number;

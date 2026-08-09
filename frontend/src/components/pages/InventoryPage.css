@@ -1,0 +1,392 @@
+/**
+ * Inventory & warehouse page styles — stock summary tiles, stock table, warehouse
+ * action buttons and the audit-trail timeline. Imported by InventoryPage.tsx.
+ */
+
+/* ── Summary tiles ─────────────────────────────────────────────────────── */
+
+.inv-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.inv-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+}
+
+.inv-stat-label {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94A3B8;
+}
+
+.inv-stat-value {
+  font-family: var(--font-body);
+  font-size: 26px;
+  font-weight: 700;
+  color: #0F172A;
+  line-height: 1.1;
+}
+
+.inv-stat-value.warn {
+  color: #D97706;
+}
+
+.inv-stat-value.danger {
+  color: #DC2626;
+}
+
+/* ── Layout ────────────────────────────────────────────────────────────── */
+
+.inv-layout {
+  display: grid;
+  /* The stock table carries four action buttons per row, so it needs the wider column. */
+  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.inv-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 640px;
+  overflow: hidden;
+}
+
+.inv-search {
+  flex-shrink: 0;
+}
+
+.inv-panel .table-responsive,
+.inv-panel .timeline {
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+/* Keep columns from crushing; the container scrolls horizontally on narrow screens
+   rather than wrapping SKUs and buttons onto multiple lines. */
+.inv-panel .glass-table {
+  min-width: 560px;
+}
+
+.inv-panel .glass-table td,
+.inv-panel .glass-table th {
+  vertical-align: middle;
+}
+
+/* SKU chips must stay on one line — they wrapped to three lines at narrow widths. */
+.inv-panel .id-code {
+  white-space: nowrap;
+}
+
+/* ── Stock table ───────────────────────────────────────────────────────── */
+
+.inv-name-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: #0F172A;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.inv-name-btn:hover {
+  color: #2563EB;
+  text-decoration: underline;
+}
+
+.stock-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stock-badge.ok {
+  background: rgba(16, 185, 129, 0.14);
+  color: #047857;
+}
+
+.stock-badge.low {
+  background: rgba(245, 158, 11, 0.16);
+  color: #B45309;
+}
+
+.stock-badge.out {
+  background: rgba(239, 68, 68, 0.14);
+  color: #B91C1C;
+}
+
+.glass-table tr.row-low td {
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.glass-table tr.row-out td {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+/* ── Warehouse action buttons ──────────────────────────────────────────── */
+
+.inv-actions {
+  display: flex;
+  gap: 5px;
+  flex-wrap: nowrap;
+}
+
+.inv-action-btn {
+  padding: 5px 11px;
+  border-radius: 9999px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s var(--ease-out-expo);
+  white-space: nowrap;
+}
+
+.inv-action-btn.tone-add {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.inv-action-btn.tone-add:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.22);
+}
+
+.inv-action-btn.tone-remove {
+  background: rgba(37, 99, 235, 0.1);
+  color: #1D4ED8;
+  border-color: rgba(37, 99, 235, 0.28);
+}
+
+.inv-action-btn.tone-remove:hover:not(:disabled) {
+  background: rgba(37, 99, 235, 0.2);
+}
+
+.inv-action-btn.tone-none {
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+  border-color: rgba(100, 116, 139, 0.28);
+}
+
+.inv-action-btn.tone-none:hover:not(:disabled) {
+  background: rgba(100, 116, 139, 0.2);
+}
+
+.inv-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Audit timeline ────────────────────────────────────────────────────── */
+
+.timeline {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 4px;
+}
+
+.timeline-row {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0 10px 2px;
+  position: relative;
+}
+
+/* Connecting rail between entries */
+.timeline-row:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 22px;
+  bottom: -2px;
+  width: 1.5px;
+  background: rgba(148, 163, 184, 0.28);
+}
+
+.timeline-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+  border: 2px solid #FFFFFF;
+  z-index: 1;
+}
+
+.dot-add {
+  background: #10B981;
+}
+
+.dot-remove {
+  background: #2563EB;
+}
+
+.dot-danger {
+  background: #EF4444;
+}
+
+.dot-neutral {
+  background: #94A3B8;
+}
+
+.timeline-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.timeline-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action-chip {
+  padding: 2px 9px;
+  border-radius: 9999px;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.chip-add {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+
+.chip-remove {
+  background: rgba(37, 99, 235, 0.13);
+  color: #1D4ED8;
+}
+
+.chip-danger {
+  background: rgba(239, 68, 68, 0.13);
+  color: #B91C1C;
+}
+
+.chip-neutral {
+  background: rgba(100, 116, 139, 0.15);
+  color: #475569;
+}
+
+.timeline-qty {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.timeline-time {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  color: #94A3B8;
+  margin-left: auto;
+}
+
+.timeline-product {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: #334155;
+}
+
+.timeline-notes {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: #64748B;
+  font-style: italic;
+}
+
+.timeline-operator {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  color: #94A3B8;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+
+/* Stack early: four action buttons plus long equipment names need the full width
+   once the sidebar is accounted for. */
+@media (max-width: 1400px) {
+  .inv-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .inv-panel {
+    max-height: none;
+  }
+}
+
+/* ── Dark mode ─────────────────────────────────────────────────────────── */
+
+[data-theme="dark"] .inv-stat-value,
+[data-theme="dark"] .inv-name-btn,
+[data-theme="dark"] .timeline-qty {
+  color: #F1F5F9;
+}
+
+[data-theme="dark"] .inv-name-btn:hover {
+  color: #93C5FD;
+}
+
+[data-theme="dark"] .timeline-product {
+  color: #C7D2E0;
+}
+
+[data-theme="dark"] .timeline-dot {
+  border-color: #161E2B;
+}
+
+[data-theme="dark"] .timeline-row:not(:last-child)::before {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme="dark"] .glass-table tr.row-low td {
+  background: rgba(245, 158, 11, 0.08);
+}
+
+[data-theme="dark"] .glass-table tr.row-out td {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+[data-theme="dark"] .inv-action-btn.tone-add {
+  background: rgba(16, 185, 129, 0.18);
+  color: #6EE7B7;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+[data-theme="dark"] .inv-action-btn.tone-remove {
+  background: rgba(59, 130, 246, 0.18);
+  color: #93C5FD;
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+[data-theme="dark"] .inv-action-btn.tone-none {
+  background: rgba(148, 163, 184, 0.16);
+  color: #CBD5E1;
+  border-color: rgba(148, 163, 184, 0.3);
+}

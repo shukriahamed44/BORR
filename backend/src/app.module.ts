@@ -20,11 +20,16 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { CategoriesModule } from './categories/categories.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { UsersModule } from './users/users.module';
+import { ActivityModule } from './activity/activity.module';
 
 @Module({
   imports: [
     PrismaModule,
+    // Global: every domain module records audit entries through ActivityService.
+    ActivityModule,
     AuthModule,
+    UsersModule,
     ProductsModule,
     CategoriesModule,
     UploadsModule,

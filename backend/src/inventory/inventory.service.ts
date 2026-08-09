@@ -13,13 +13,17 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InventoryAction } from '@prisma/client';
+import { ActivityAction, InventoryAction } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ActivityService } from '../activity/activity.service';
 import { CreateInventoryLogDto } from './dto/create-inventory-log.dto';
 
 @Injectable()
 export class InventoryService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private activity: ActivityService,
+  ) {}
 
   /**
    * Records an inventory log entry and updates product stock levels atomically.
@@ -83,6 +87,20 @@ export class InventoryService {
       });
 
       return { log, updatedStock: updatedProduct.totalStock };
+    });
+
+    await this.activity.record({
+      userId: operatorId,
+      action: ActivityAction.INVENTORY_CHANGED,
+      entityType: 'Product',
+      entityId: dto.productId,
+      metadata: {
+        inventoryAction: dto.action,
+        quantity: dto.quantity,
+        newStockLevel: result.updatedStock,
+        productName: product.name,
+        sku: product.sku,
+      },
     });
 
     return {

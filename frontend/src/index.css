@@ -2438,6 +2438,53 @@ select {
   transform: translateX(16px);
 }
 
+/* Notification read/unread state */
+.notification-item {
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.notification-item:hover {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+/* Unread entries carry a tinted ground and a left accent rail. */
+.notification-item.unread {
+  background: rgba(37, 99, 235, 0.07);
+  box-shadow: inset 2px 0 0 #2563EB;
+}
+
+.popover-mark-read {
+  margin-left: auto;
+  margin-right: 8px;
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #2563EB;
+  cursor: pointer;
+  text-transform: none;
+}
+
+.popover-mark-read:hover {
+  text-decoration: underline;
+}
+
+[data-theme="dark"] .notification-item.unread {
+  background: rgba(59, 130, 246, 0.14);
+  box-shadow: inset 2px 0 0 #3B82F6;
+}
+
+[data-theme="dark"] .notification-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+[data-theme="dark"] .popover-mark-read {
+  color: #93C5FD;
+}
+
 .notifications-empty {
   padding: 26px 16px;
   text-align: center;

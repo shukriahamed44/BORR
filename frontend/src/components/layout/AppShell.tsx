@@ -7,6 +7,8 @@ import { EquipmentPage } from '../pages/EquipmentPage';
 import { ReservationsPage } from '../pages/ReservationsPage';
 import { InventoryPage } from '../pages/InventoryPage';
 import { PaymentsPage } from '../pages/PaymentsPage';
+import { CustomersPage } from '../pages/CustomersPage';
+import { SettingsPage } from '../pages/SettingsPage';
 
 interface AppShellProps {
   currentUser: UserProfile;
@@ -14,8 +16,15 @@ interface AppShellProps {
 }
 
 export const AppShell: React.FC<AppShellProps> = ({ currentUser, onSignOut }) => {
-  // Role comes from the authenticated JWT user — the backend RBAC guards enforce the same value.
-  const currentRole = currentUser.role;
+  // Locally mutable copy so a profile edit in Settings updates the header immediately
+  // without forcing a re-login. Role still originates from the verified JWT.
+  const [sessionUser, setSessionUser] = useState<UserProfile>(currentUser);
+
+  useEffect(() => {
+    setSessionUser(currentUser);
+  }, [currentUser]);
+
+  const currentRole = sessionUser.role;
 
   const [activeNavId, setActiveNavId] = useState<NavigationItemId>(
     currentRole === 'CUSTOMER' ? 'storefront' : 'dashboard',
@@ -50,22 +59,15 @@ export const AppShell: React.FC<AppShellProps> = ({ currentUser, onSignOut }) =>
       case 'payments':
         return <PaymentsPage currentRole={currentRole} />;
       case 'customers':
-        return (
-          <div className="placeholder-view glass-panel">
-            <h2>👥 Customers & Document Verification</h2>
-            <p>
-              Verified customer accounts: John Customer (customer@ammunation.com), Sarah Connor (sarah.connor@gmail.com), Bruce Wayne (bruce.wayne@enterprise.com).
-            </p>
-          </div>
-        );
+        return <CustomersPage currentRole={currentRole} />;
       case 'settings':
         return (
-          <div className="placeholder-view glass-panel">
-            <h2>⚙️ System & Account Preferences</h2>
-            <p>
-              Signed in as <strong>{currentUser.name}</strong> ({currentUser.email}) with role <strong>{currentRole}</strong>.
-            </p>
-          </div>
+          <SettingsPage
+            currentUser={sessionUser}
+            theme={theme}
+            onToggleTheme={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+            onProfileUpdated={(user) => setSessionUser({ ...sessionUser, ...user })}
+          />
         );
       default:
         return null;
@@ -94,7 +96,7 @@ export const AppShell: React.FC<AppShellProps> = ({ currentUser, onSignOut }) =>
       <div className="app-main-wrapper">
         {/* Header Bar */}
         <Header
-          currentUser={currentUser}
+          currentUser={sessionUser}
           currentRole={currentRole}
           onToggleMobileSidebar={() =>
             setIsMobileSidebarOpen(!isMobileSidebarOpen)

@@ -1,0 +1,192 @@
+/**
+ * Account settings styles — two-column card layout, form controls, preference rows
+ * and the role capability list. Imported by SettingsPage.tsx.
+ */
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.settings-column {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Forms ─────────────────────────────────────────────────────────────── */
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.settings-label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748B;
+}
+
+.settings-input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: #0F172A;
+  background: rgba(241, 245, 249, 0.9);
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 12px;
+  padding: 11px 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.settings-input:focus {
+  outline: none;
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.settings-hint {
+  font-family: var(--font-body);
+  font-size: 11px;
+  line-height: 1.45;
+  color: #94A3B8;
+}
+
+.settings-error {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: #DC2626;
+}
+
+.settings-submit {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.settings-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Preference row ────────────────────────────────────────────────────── */
+
+.pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pref-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pref-title {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.pref-sub {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #94A3B8;
+}
+
+/* The switch is reused from the header profile menu; reset button chrome here. */
+.pref-row .theme-switch {
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+/* ── Role & capabilities ───────────────────────────────────────────────── */
+
+.role-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.role-summary-title {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.capability-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.capability-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #334155;
+}
+
+.capability-list svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #10B981;
+}
+
+/* ── Dark mode ─────────────────────────────────────────────────────────── */
+
+[data-theme="dark"] .settings-input {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #E8EDF5;
+}
+
+[data-theme="dark"] .settings-input:focus {
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="dark"] .settings-label {
+  color: #94A3B8;
+}
+
+[data-theme="dark"] .pref-title,
+[data-theme="dark"] .role-summary-title {
+  color: #F1F5F9;
+}
+
+[data-theme="dark"] .capability-list li {
+  color: #C7D2E0;
+}

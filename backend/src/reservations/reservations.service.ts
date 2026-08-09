@@ -16,8 +16,9 @@ import {
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
-import { Prisma, ReservationStatus, Role } from '@prisma/client';
+import { ActivityAction, Prisma, ReservationStatus, Role } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ActivityService } from '../activity/activity.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationStatusDto } from './dto/update-status.dto';
@@ -28,6 +29,7 @@ export class ReservationsService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
+    private activity: ActivityService,
   ) {}
 
   onModuleInit() {
@@ -48,7 +50,15 @@ export class ReservationsService implements OnModuleInit {
       throw new BadRequestException('Reservation end date must be strictly after the start date.');
     }
 
-    if (start < new Date()) {
+    // Clients submit a date-only value, which serialises to UTC midnight. Comparing that
+    // against the current instant would reject "today"; comparing against local midnight
+    // would still reject it for clients behind UTC. Allowing one day of slack covers every
+    // timezone offset (max ±14h) while still refusing genuinely past bookings.
+    const earliestAllowed = new Date();
+    earliestAllowed.setUTCHours(0, 0, 0, 0);
+    earliestAllowed.setUTCDate(earliestAllowed.getUTCDate() - 1);
+
+    if (start < earliestAllowed) {
       throw new BadRequestException('Reservation start date cannot be in the past.');
     }
 
@@ -113,6 +123,18 @@ export class ReservationsService implements OnModuleInit {
       return createdReservation;
     });
 
+    await this.activity.record({
+      userId,
+      action: ActivityAction.RESERVATION_CREATED,
+      entityType: 'Reservation',
+      entityId: reservation.id,
+      metadata: {
+        totalPrice,
+        durationDays,
+        itemCount: itemsToCreate.length,
+      },
+    });
+
     return {
       message: 'Reservation created successfully and is pending approval.',
       reservation,
@@ -171,11 +193,24 @@ export class ReservationsService implements OnModuleInit {
       },
     });
 
+    await this.activity.record({
+      userId: currentUser.id,
+      action: ActivityAction.RESERVATION_UPDATED,
+      entityType: 'Reservation',
+      entityId: id,
+      metadata: {
+        from: currentStatus,
+        to: targetStatus,
+        ...(dto.rejectionReason ? { rejectionReason: dto.rejectionReason } : {}),
+      },
+    });
+
     // Asynchronously enqueue notification tasks via BullMQ Redis queue
     if (targetStatus === ReservationStatus.APPROVED) {
       await this.notificationsService.notifyReservationApproved({
         reservationId: updated.id,
         userEmail: updated.user.email,
+        userId: updated.user.id,
         startDate: updated.startDate,
         endDate: updated.endDate,
       });
@@ -183,6 +218,8 @@ export class ReservationsService implements OnModuleInit {
       await this.notificationsService.notifyReservationRejected({
         reservationId: updated.id,
         userEmail: updated.user.email,
+        userId: updated.user.id,
+        reason: dto.rejectionReason,
       });
     }
 
@@ -205,13 +242,14 @@ export class ReservationsService implements OnModuleInit {
         status: { in: [ReservationStatus.APPROVED, ReservationStatus.ACTIVE] },
         endDate: { gte: now, lte: next24Hours },
       },
-      include: { user: { select: { email: true } } },
+      include: { user: { select: { id: true, email: true } } },
     });
 
     for (const res of upcoming) {
       await this.notificationsService.notifyUpcomingReturn({
         reservationId: res.id,
         userEmail: res.user.email,
+        userId: res.user.id,
         endDate: res.endDate,
       });
     }
@@ -222,7 +260,7 @@ export class ReservationsService implements OnModuleInit {
         status: ReservationStatus.PENDING,
         startDate: { lt: now },
       },
-      include: { user: { select: { email: true } } },
+      include: { user: { select: { id: true, email: true } } },
     });
 
     for (const res of expired) {
@@ -234,6 +272,7 @@ export class ReservationsService implements OnModuleInit {
       await this.notificationsService.notifyReservationExpired({
         reservationId: res.id,
         userEmail: res.user.email,
+        userId: res.user.id,
       });
     }
 

@@ -1,0 +1,277 @@
+/**
+ * Customer directory styles — summary tiles, account table, verification chips and the
+ * profile drawer. Reuses the reservations drawer shell (.res-drawer) for consistency.
+ * Imported by CustomersPage.tsx.
+ */
+
+.cust-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.cust-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+}
+
+.cust-stat-label {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94A3B8;
+}
+
+.cust-stat-value {
+  font-family: var(--font-body);
+  font-size: 26px;
+  font-weight: 700;
+  color: #0F172A;
+  line-height: 1.1;
+}
+
+.cust-stat-value.warn {
+  color: #B45309;
+}
+
+.cust-search {
+  margin-bottom: 14px;
+}
+
+.cust-panel {
+  padding: 8px 6px;
+}
+
+/* ── Identity cell ─────────────────────────────────────────────────────── */
+
+.cust-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cust-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  color: #FFFFFF;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cust-avatar.large {
+  width: 42px;
+  height: 42px;
+  font-size: 17px;
+}
+
+.cust-identity-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cust-name {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: #0F172A;
+  white-space: nowrap;
+}
+
+.cust-email {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: #94A3B8;
+  white-space: nowrap;
+}
+
+/* ── Verification chips ────────────────────────────────────────────────── */
+
+.verify-chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.verify-verified {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+
+.verify-pending_review {
+  background: rgba(245, 158, 11, 0.16);
+  color: #B45309;
+}
+
+.verify-unverified {
+  background: rgba(100, 116, 139, 0.14);
+  color: #64748B;
+}
+
+.verify-sub {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: #94A3B8;
+  margin-top: 3px;
+}
+
+/* ── Profile drawer ────────────────────────────────────────────────────── */
+
+.cust-drawer {
+  width: min(520px, 100%);
+}
+
+.cust-drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.cust-drawer-name {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.cust-drawer-email {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: #94A3B8;
+}
+
+.section-badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(245, 158, 11, 0.16);
+  color: #B45309;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Inline document rejection */
+.doc-reject-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.doc-reject-input {
+  flex: 1;
+  min-width: 160px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: #0F172A;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 10px;
+  padding: 7px 11px;
+}
+
+.doc-reject-input:focus {
+  outline: none;
+  border-color: #2563EB;
+}
+
+/* Reservation history */
+.cust-res-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cust-res-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(241, 245, 249, 0.85);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.cust-res-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cust-res-meta {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: #64748B;
+  grid-column: 1;
+}
+
+.cust-res-amount {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: center;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+}
+
+/* ── Dark mode ─────────────────────────────────────────────────────────── */
+
+[data-theme="dark"] .cust-stat-value,
+[data-theme="dark"] .cust-name,
+[data-theme="dark"] .cust-drawer-name,
+[data-theme="dark"] .cust-res-amount {
+  color: #F1F5F9;
+}
+
+[data-theme="dark"] .cust-stat-value.warn {
+  color: #FCD34D;
+}
+
+[data-theme="dark"] .cust-res-row {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .verify-unverified {
+  background: rgba(148, 163, 184, 0.18);
+  color: #CBD5E1;
+}
+
+[data-theme="dark"] .doc-reject-input {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #E8EDF5;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .cust-email {
+    display: none;
+  }
+}

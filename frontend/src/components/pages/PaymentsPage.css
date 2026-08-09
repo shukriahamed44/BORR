@@ -1,0 +1,514 @@
+/**
+ * Payments & billing styles — revenue tiles, outstanding balances, transaction ledger,
+ * Stripe-style checkout card and the printable invoice sheet.
+ * Imported by PaymentsPage.tsx.
+ */
+
+/* ── Revenue summary ───────────────────────────────────────────────────── */
+
+.pay-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.pay-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+}
+
+.pay-stat-label {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94A3B8;
+}
+
+.pay-stat-value {
+  font-family: var(--font-body);
+  font-size: 23px;
+  font-weight: 700;
+  color: #0F172A;
+  line-height: 1.15;
+}
+
+.pay-stat-value.ok {
+  color: #047857;
+}
+
+.pay-stat-value.warn {
+  color: #B45309;
+}
+
+/* ── Outstanding balances ──────────────────────────────────────────────── */
+
+.outstanding-panel {
+  margin-bottom: 18px;
+}
+
+.outstanding-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.outstanding-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(241, 245, 249, 0.85);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  flex-wrap: wrap;
+}
+
+.outstanding-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.outstanding-dates {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: #475569;
+}
+
+.outstanding-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.outstanding-amount {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+/* ── Ledger ────────────────────────────────────────────────────────────── */
+
+.pay-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.pay-panel {
+  padding: 8px 6px;
+}
+
+.txn-id {
+  font-family: 'Courier New', monospace;
+  font-size: 11.5px;
+  color: #334155;
+  display: block;
+}
+
+.txn-provider {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: #94A3B8;
+  letter-spacing: 0.04em;
+}
+
+.amount-cell {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.date-cell {
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.pay-status {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.pay-paid {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+
+.pay-pending {
+  background: rgba(245, 158, 11, 0.16);
+  color: #B45309;
+}
+
+.pay-failed {
+  background: rgba(239, 68, 68, 0.14);
+  color: #B91C1C;
+}
+
+.pay-refunded {
+  background: rgba(100, 116, 139, 0.16);
+  color: #475569;
+}
+
+.pay-reason {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  color: #94A3B8;
+  margin-top: 3px;
+  max-width: 180px;
+}
+
+.pay-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+/* ── Checkout card ─────────────────────────────────────────────────────── */
+
+.liquid-glass-modal.checkout-modal {
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.checkout-summary {
+  margin-bottom: 16px;
+}
+
+.card-form {
+  padding: 16px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  margin-bottom: 16px;
+}
+
+.card-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.card-chip {
+  width: 34px;
+  height: 24px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, #F1C97A 0%, #D9A441 100%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6);
+}
+
+.card-brand {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+}
+
+.card-field {
+  flex: 1;
+  margin-bottom: 10px;
+}
+
+.card-field label {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 3px;
+}
+
+.card-value {
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  color: #FFFFFF;
+}
+
+.card-row {
+  display: flex;
+  gap: 14px;
+}
+
+.card-note {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 6px;
+}
+
+.btn-simulate-fail {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #FCA5A5;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.22s var(--ease-out-expo);
+}
+
+.btn-simulate-fail:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.26);
+  color: #FFFFFF;
+}
+
+.btn-simulate-fail:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Printable invoice ─────────────────────────────────────────────────── */
+
+.invoice-modal {
+  width: min(620px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.invoice-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+}
+
+.invoice-sheet {
+  background: #FFFFFF;
+  color: #0F172A;
+  border-radius: 16px;
+  padding: 32px;
+  font-family: var(--font-body);
+  box-shadow: 0 24px 60px rgba(4, 16, 32, 0.4);
+}
+
+.invoice-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 18px;
+  border-bottom: 2px solid #0F172A;
+}
+
+.invoice-brand {
+  font-family: var(--font-wide);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #0F172A;
+}
+
+.invoice-tagline {
+  font-size: 11.5px;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+.invoice-stamp {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border: 2px solid currentColor;
+}
+
+.stamp-paid {
+  color: #047857;
+}
+
+.stamp-refunded {
+  color: #475569;
+}
+
+.stamp-failed {
+  color: #B91C1C;
+}
+
+.stamp-pending {
+  color: #B45309;
+}
+
+.invoice-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 24px;
+  padding: 20px 0;
+}
+
+.invoice-meta dt {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94A3B8;
+  margin-bottom: 3px;
+}
+
+.invoice-meta dd {
+  font-size: 12.5px;
+  color: #0F172A;
+  word-break: break-all;
+}
+
+.invoice-sub {
+  color: #64748B;
+  font-size: 11.5px;
+}
+
+.invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+}
+
+.invoice-table th,
+.invoice-table td {
+  text-align: left;
+  padding: 10px 0;
+  font-size: 12.5px;
+}
+
+.invoice-table thead th {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94A3B8;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.invoice-table th:last-child,
+.invoice-table td:last-child {
+  text-align: right;
+}
+
+.invoice-table tfoot th {
+  border-top: 2px solid #0F172A;
+  font-size: 14px;
+  padding-top: 12px;
+}
+
+.invoice-note {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #F1F5F9;
+  font-size: 11.5px;
+  color: #475569;
+}
+
+.invoice-foot {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid #E2E8F0;
+  font-size: 10.5px;
+  color: #94A3B8;
+  text-align: center;
+}
+
+.invoice-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Print: isolate the receipt sheet from the surrounding app chrome. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #invoice-sheet,
+  #invoice-sheet * {
+    visibility: visible;
+  }
+
+  #invoice-sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .invoice-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .outstanding-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ── Dark mode ─────────────────────────────────────────────────────────── */
+
+[data-theme="dark"] .pay-stat-value,
+[data-theme="dark"] .outstanding-amount {
+  color: #F1F5F9;
+}
+
+[data-theme="dark"] .pay-stat-value.ok {
+  color: #6EE7B7;
+}
+
+[data-theme="dark"] .pay-stat-value.warn {
+  color: #FCD34D;
+}
+
+[data-theme="dark"] .outstanding-row {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .outstanding-dates,
+[data-theme="dark"] .txn-id {
+  color: #C7D2E0;
+}
+
+[data-theme="dark"] .pay-refunded {
+  background: rgba(148, 163, 184, 0.2);
+  color: #CBD5E1;
+}
+
+/* The invoice sheet stays light in both themes — it is a printable document. */

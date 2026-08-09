@@ -11,14 +11,20 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
+  Param,
+  Patch,
   Post,
+  Query,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -48,5 +54,39 @@ export class NotificationsController {
   @ApiResponse({ status: 202, description: 'Push task accepted and enqueued.' })
   async sendPush(@Body() dto: SendPushDto) {
     return this.notificationsService.addPushNotification(dto);
+  }
+
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "The authenticated user's own notification feed with unread count" })
+  @ApiQuery({ name: 'unreadOnly', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiResponse({ status: 200, description: 'Notifications retrieved.' })
+  async findMine(
+    @Request() req: any,
+    @Query('unreadOnly') unreadOnly?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.notificationsService.findForUser(req.user.id, {
+      unreadOnly: unreadOnly === 'true',
+      limit: limit ? Number(limit) : undefined,
+    });
+  }
+
+  @Patch(':id/read')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Mark a single notification as read' })
+  @ApiResponse({ status: 200, description: 'Marked as read.' })
+  @ApiResponse({ status: 404, description: 'Notification not found for this user.' })
+  async markRead(@Param('id') id: string, @Request() req: any) {
+    return this.notificationsService.markRead(id, req.user.id);
+  }
+
+  @Patch('read-all')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Mark every unread notification as read' })
+  @ApiResponse({ status: 200, description: 'All notifications marked as read.' })
+  async markAllRead(@Request() req: any) {
+    return this.notificationsService.markAllRead(req.user.id);
   }
 }

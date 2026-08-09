@@ -13,6 +13,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Request,
   UseGuards,
@@ -30,6 +31,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ChangePasswordDto, UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
@@ -67,8 +69,10 @@ export class AuthController {
   @ApiOperation({ summary: 'Authenticate user credentials and issue dual JWT tokens' })
   @ApiResponse({ status: 200, description: 'Login successful. Returns user profile, access token, and refresh token.' })
   @ApiResponse({ status: 401, description: 'Invalid email or password.' })
-  async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  async login(@Request() req: any, @Body() dto: LoginDto) {
+    // Recorded on the audit entry; behind a proxy this is the proxy address unless
+    // Express `trust proxy` is enabled.
+    return this.authService.login(dto, req.ip);
   }
 
   @Post('refresh')
@@ -99,5 +103,31 @@ export class AuthController {
     return {
       user: req.user,
     };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @Patch('me')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Update the authenticated user's own profile (name, email, phone)" })
+  @ApiResponse({ status: 200, description: 'Profile updated.' })
+  @ApiResponse({ status: 409, description: 'Email address already in use.' })
+  async updateProfile(@Request() req: any, @Body() dto: UpdateProfileDto) {
+    return this.authService.updateProfile(req.user.id, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      "Rotate the authenticated user's password after verifying the current one. Note: existing refresh tokens remain valid until they expire.",
+  })
+  @ApiResponse({ status: 200, description: 'Password changed.' })
+  @ApiResponse({ status: 400, description: 'New password matches the current password.' })
+  @ApiResponse({ status: 401, description: 'Current password is incorrect.' })
+  async changePassword(@Request() req: any, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(req.user.id, dto);
   }
 }

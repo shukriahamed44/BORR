@@ -1,935 +1,1576 @@
 {
-	"info": {
-		"_postman_id": "ammunation-erp-master-collection-v3",
-		"name": "AmmuNation Enterprise ERP Master API Collection",
-		"description": "Master Postman Collection v2.1 for AmmuNation ERP backend services (Auth, Equipment, Reservations, Inventory Logs, Payments, Notifications Queue).",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"variable": [
-		{
-			"key": "baseUrl",
-			"value": "http://localhost:3000/api/v1",
-			"type": "string"
-		},
-		{
-			"key": "accessToken",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "refreshToken",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "productId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "reservationId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "paymentId",
-			"value": "",
-			"type": "string"
-		}
-	],
-	"item": [
-		{
-			"name": "📁 Auth",
-			"item": [
-				{
-					"name": "1. Register User (ADMIN / STAFF / CUSTOMER / WAREHOUSE_OPERATOR)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.accessToken) {",
-									"    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
-									"    pm.collectionVariables.set('refreshToken', jsonData.refreshToken);",
-									"    console.log('AccessToken auto-saved into collection variable!');",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"admin.alex@ammunation.com\",\n  \"password\": \"Password123!\",\n  \"name\": \"Commander Alex\",\n  \"role\": \"ADMIN\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/auth/register",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"auth",
-								"register"
-							]
-						}
-					}
-				},
-				{
-					"name": "2. Login User",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.accessToken) {",
-									"    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
-									"    pm.collectionVariables.set('refreshToken', jsonData.refreshToken);",
-									"    console.log('Tokens refreshed and saved into collection variables!');",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"admin.alex@ammunation.com\",\n  \"password\": \"Password123!\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/auth/login",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"auth",
-								"login"
-							]
-						}
-					}
-				},
-				{
-					"name": "3. Get User Profile (Protected /auth/me)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/auth/me",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"auth",
-								"me"
-							]
-						}
-					}
-				},
-				{
-					"name": "4. Refresh Access Token",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.accessToken) {",
-									"    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
-									"    console.log('New Access Token saved!');",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/auth/refresh",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"auth",
-								"refresh"
-							]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "📁 Equipment",
-			"item": [
-				{
-					"name": "1. List All Equipment (Public / Customer)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/products",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"products"
-							]
-						}
-					}
-				},
-				{
-					"name": "2. Add Equipment (ADMIN or STAFF only)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.product && jsonData.product.id) {",
-									"    pm.collectionVariables.set('productId', jsonData.product.id);",
-									"    console.log('ProductId auto-saved:', jsonData.product.id);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"name\": \"Tactical Recon Drone Mark IV\",\n  \"sku\": \"EQUIP-DRONE-001\",\n  \"description\": \"Long-range surveillance drone with thermal imaging capacity.\",\n  \"pricePerDay\": 150.50,\n  \"totalStock\": 10\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/products",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"products"
-							]
-						}
-					}
-				},
-				{
-					"name": "3. Get Equipment Details",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/products/{{productId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"products",
-								"{{productId}}"
-							]
-						}
-					}
-				},
-				{
-					"name": "4. Update Equipment (ADMIN or STAFF only)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"pricePerDay\": 175.00,\n  \"totalStock\": 12\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/products/{{productId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"products",
-								"{{productId}}"
-							]
-						}
-					}
-				},
-				{
-					"name": "5. Delete Equipment (ADMIN only)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/products/{{productId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"products",
-								"{{productId}}"
-							]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "📁 Reservations",
-			"item": [
-				{
-					"name": "1. Create Reservation (PENDING state)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.reservation && jsonData.reservation.id) {",
-									"    pm.collectionVariables.set('reservationId', jsonData.reservation.id);",
-									"    console.log('ReservationId auto-saved:', jsonData.reservation.id);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"startDate\": \"2026-08-10T09:00:00.000Z\",\n  \"endDate\": \"2026-08-15T18:00:00.000Z\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2\n    }\n  ]\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/reservations",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"reservations"
-							]
-						}
-					}
-				},
-				{
-					"name": "2. List Reservations",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/reservations",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"reservations"
-							]
-						}
-					}
-				},
-				{
-					"name": "3. Get Reservation Details",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/reservations/{{reservationId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"reservations",
-								"{{reservationId}}"
-							]
-						}
-					}
-				},
-				{
-					"name": "4. Approve Reservation (STAFF or ADMIN only)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"status\": \"APPROVED\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/reservations/{{reservationId}}/status",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"reservations",
-								"{{reservationId}}",
-								"status"
-							]
-						}
-					}
-				},
-				{
-					"name": "5. Checkout Equipment (Transition APPROVED -> ACTIVE)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"status\": \"ACTIVE\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/reservations/{{reservationId}}/status",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"reservations",
-								"{{reservationId}}",
-								"status"
-							]
-						}
-					}
-				},
-				{
-					"name": "6. Return Equipment (Transition ACTIVE -> RETURNED)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"status\": \"RETURNED\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/reservations/{{reservationId}}/status",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"reservations",
-								"{{reservationId}}",
-								"status"
-							]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "📁 Inventory Logs",
-			"item": [
-				{
-					"name": "1. Log Stock Receipt (RECEIVE stock)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"productId\": \"{{productId}}\",\n  \"action\": \"RECEIVE\",\n  \"quantity\": 10,\n  \"notes\": \"Received new stock batch from supplier.\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/inventory/logs",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"inventory",
-								"logs"
-							]
-						}
-					}
-				},
-				{
-					"name": "2. Log Damage Record (DAMAGE_RECORDED)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"productId\": \"{{productId}}\",\n  \"action\": \"DAMAGE_RECORDED\",\n  \"quantity\": 1,\n  \"notes\": \"Lens cracked during field operation #102.\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/inventory/logs",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"inventory",
-								"logs"
-							]
-						}
-					}
-				},
-				{
-					"name": "3. List Inventory Action Logs",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/inventory/logs",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"inventory",
-								"logs"
-							]
-						}
-					}
-				},
-				{
-					"name": "4. Get Product Audit History",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/inventory/logs/product/{{productId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"inventory",
-								"logs",
-								"product",
-								"{{productId}}"
-							]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "📁 Payments",
-			"item": [
-				{
-					"name": "1. Process Payment (PAID)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.payment && jsonData.payment.id) {",
-									"    pm.collectionVariables.set('paymentId', jsonData.payment.id);",
-									"    console.log('PaymentId auto-saved:', jsonData.payment.id);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"reservationId\": \"{{reservationId}}\",\n  \"amount\": 903.00,\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"simulateFailure\": false\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/payments/process",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"payments",
-								"process"
-							]
-						}
-					}
-				},
-				{
-					"name": "2. Simulate Payment Failure (FAILED)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"reservationId\": \"{{reservationId}}\",\n  \"amount\": 903.00,\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"simulateFailure\": true\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/payments/process",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"payments",
-								"process"
-							]
-						}
-					}
-				},
-				{
-					"name": "3. Refund Payment (STAFF or ADMIN only)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"paymentId\": \"{{paymentId}}\",\n  \"reason\": \"Customer requested cancellation prior to equipment checkout.\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/payments/refund",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"payments",
-								"refund"
-							]
-						}
-					}
-				},
-				{
-					"name": "4. Get Reservation Payments",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/payments/reservation/{{reservationId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"payments",
-								"reservation",
-								"{{reservationId}}"
-							]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "📁 Notifications Queue",
-			"item": [
-				{
-					"name": "1. Trigger Async Email Queue Job",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"to\": \"alex.customer@ammunation.com\",\n  \"subject\": \"AmmuNation Reservation Approved\",\n  \"body\": \"Your equipment reservation #102 has been approved for pickup.\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/notifications/test-email",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"notifications",
-								"test-email"
-							]
-						}
-					}
-				},
-				{
-					"name": "2. Trigger Async Mobile Push Queue Job",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{accessToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"deviceToken\": \"fcm_token_device_99018\",\n  \"title\": \"Equipment Return Alert\",\n  \"message\": \"Tactical Recon Drone Mark IV is due for return by 6:00 PM today.\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/notifications/test-push",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"notifications",
-								"test-push"
-							]
-						}
-					}
-				}
-			]
-		}
-	]
+  "info": {
+    "_postman_id": "ammunation-erp-master-collection-v3",
+    "name": "AmmuNation Enterprise ERP Master API Collection",
+    "description": "Master Postman Collection v2.1 for AmmuNation ERP backend services (Auth, Equipment, Reservations, Inventory Logs, Payments, Notifications Queue).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reservationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "paymentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "uploadId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notificationId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "📁 Auth",
+      "item": [
+        {
+          "name": "1. Register User (ADMIN / STAFF / CUSTOMER / WAREHOUSE_OPERATOR)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', jsonData.refreshToken);",
+                  "    console.log('AccessToken auto-saved into collection variable!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin.alex@ammunation.com\",\n  \"password\": \"Password123!\",\n  \"name\": \"Commander Alex\",\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', jsonData.refreshToken);",
+                  "    console.log('Tokens refreshed and saved into collection variables!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin.alex@ammunation.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Get User Profile (Protected /auth/me)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Refresh Access Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
+                  "    console.log('New Access Token saved!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"phone\": \"+94 77 123 4567\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Change My Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Password123!\",\n  \"newPassword\": \"NewPassword456!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📁 Equipment",
+      "item": [
+        {
+          "name": "1. List All Equipment (Public / Customer)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Add Equipment (ADMIN or STAFF only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.product && jsonData.product.id) {",
+                  "    pm.collectionVariables.set('productId', jsonData.product.id);",
+                  "    console.log('ProductId auto-saved:', jsonData.product.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tactical Recon Drone Mark IV\",\n  \"sku\": \"EQUIP-DRONE-001\",\n  \"description\": \"Long-range surveillance drone with thermal imaging capacity.\",\n  \"pricePerDay\": 150.50,\n  \"totalStock\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Get Equipment Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{productId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Update Equipment (ADMIN or STAFF only)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pricePerDay\": 175.00,\n  \"totalStock\": 12\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{productId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "5. Delete Equipment (ADMIN only)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{productId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter / Search / Paginate Catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products?search=drill&categorySlug=power-tools&minPrice=0&maxPrice=500&availableOnly=true&sort=price_asc&page=1&limit=12",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "drill",
+                  "disabled": true
+                },
+                {
+                  "key": "categorySlug",
+                  "value": "power-tools",
+                  "disabled": true
+                },
+                {
+                  "key": "minPrice",
+                  "value": "0",
+                  "disabled": true
+                },
+                {
+                  "key": "maxPrice",
+                  "value": "500",
+                  "disabled": true
+                },
+                {
+                  "key": "availableOnly",
+                  "value": "true",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "price_asc",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "12",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📁 Reservations",
+      "item": [
+        {
+          "name": "1. Create Reservation (PENDING state)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.reservation && jsonData.reservation.id) {",
+                  "    pm.collectionVariables.set('reservationId', jsonData.reservation.id);",
+                  "    console.log('ReservationId auto-saved:', jsonData.reservation.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startDate\": \"2026-08-10T09:00:00.000Z\",\n  \"endDate\": \"2026-08-15T18:00:00.000Z\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reservations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. List Reservations",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Get Reservation Details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Approve Reservation (STAFF or ADMIN only)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "5. Checkout Equipment (Transition APPROVED -> ACTIVE)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Return Equipment (Transition ACTIVE -> RETURNED)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"RETURNED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter Reservations by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations?status=PENDING&search=&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "PENDING",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject with Reason",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"REJECTED\",\n  \"rejectionReason\": \"Equipment under maintenance for those dates.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}",
+                "status"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📁 Inventory Logs",
+      "item": [
+        {
+          "name": "1. Log Stock Receipt (RECEIVE stock)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"action\": \"RECEIVE\",\n  \"quantity\": 10,\n  \"notes\": \"Received new stock batch from supplier.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "inventory",
+                "logs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Log Damage Record (DAMAGE_RECORDED)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"action\": \"DAMAGE_RECORDED\",\n  \"quantity\": 1,\n  \"notes\": \"Lens cracked during field operation #102.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "inventory",
+                "logs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. List Inventory Action Logs",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "inventory",
+                "logs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Get Product Audit History",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/logs/product/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "inventory",
+                "logs",
+                "product",
+                "{{productId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📁 Payments",
+      "item": [
+        {
+          "name": "1. Process Payment (PAID)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.payment && jsonData.payment.id) {",
+                  "    pm.collectionVariables.set('paymentId', jsonData.payment.id);",
+                  "    console.log('PaymentId auto-saved:', jsonData.payment.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reservationId\": \"{{reservationId}}\",\n  \"amount\": 903.00,\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"simulateFailure\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/process",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "process"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Simulate Payment Failure (FAILED)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reservationId\": \"{{reservationId}}\",\n  \"amount\": 903.00,\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"simulateFailure\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/process",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "process"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Refund Payment (STAFF or ADMIN only)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"{{paymentId}}\",\n  \"reason\": \"Customer requested cancellation prior to equipment checkout.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/refund",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "refund"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Get Reservation Payments",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payments/reservation/{{reservationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "reservation",
+                "{{reservationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Payment Ledger",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payments?status=PAID&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "PAID",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Simulate Declined Card",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reservationId\": \"{{reservationId}}\",\n  \"amount\": 100,\n  \"simulateFailure\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/process",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "process"
+              ]
+            },
+            "description": "Persists a FAILED payment row, then returns 400."
+          }
+        }
+      ]
+    },
+    {
+      "name": "📁 Notifications Queue",
+      "item": [
+        {
+          "name": "1. Trigger Async Email Queue Job",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"alex.customer@ammunation.com\",\n  \"subject\": \"AmmuNation Reservation Approved\",\n  \"body\": \"Your equipment reservation #102 has been approved for pickup.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/test-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "test-email"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Trigger Async Mobile Push Queue Job",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceToken\": \"fcm_token_device_99018\",\n  \"title\": \"Equipment Return Alert\",\n  \"message\": \"Tactical Recon Drone Mark IV is due for return by 6:00 PM today.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/test-push",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "test-push"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📁 Categories",
+      "item": [
+        {
+          "name": "1. List Categories (with product counts)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Get Category by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories",
+                "{{categoryId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📁 Dashboard Analytics",
+      "item": [
+        {
+          "name": "1. Business KPIs (ADMIN / STAFF)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dashboard",
+                "stats"
+              ]
+            },
+            "description": "Revenue, utilisation, most-rented equipment and 14-day reservation trends. Returns 403 for CUSTOMER and WAREHOUSE_OPERATOR."
+          }
+        },
+        {
+          "name": "2. My Rental Summary (any role)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/my-summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dashboard",
+                "my-summary"
+              ]
+            },
+            "description": "Scoped to the authenticated user; never exposes another account."
+          }
+        }
+      ]
+    },
+    {
+      "name": "📁 Document Uploads",
+      "item": [
+        {
+          "name": "1. Upload Document (multipart)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "type",
+                  "value": "IDENTITY_DOCUMENT",
+                  "type": "text"
+                },
+                {
+                  "key": "reservationId",
+                  "value": "{{reservationId}}",
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/uploads",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "uploads"
+              ]
+            },
+            "description": "JPEG/PNG/WebP/PDF only, 8MB max. Do NOT set Content-Type manually — Postman generates the multipart boundary."
+          }
+        },
+        {
+          "name": "2. List Documents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/uploads?reservationId={{reservationId}}&status=PENDING_REVIEW",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "uploads"
+              ],
+              "query": [
+                {
+                  "key": "reservationId",
+                  "value": "{{reservationId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "PENDING_REVIEW",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Download Document",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/uploads/{{uploadId}}/file",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "uploads",
+                "{{uploadId}}",
+                "file"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Verify / Reject Document (ADMIN, STAFF)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"VERIFIED\",\n  \"rejectionNote\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/uploads/{{uploadId}}/review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "uploads",
+                "{{uploadId}}",
+                "review"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📁 User Directory (ADMIN / STAFF)",
+      "item": [
+        {
+          "name": "1. List Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users?role=CUSTOMER&search=&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "CUSTOMER",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Password hashes are never returned."
+          }
+        },
+        {
+          "name": "2. Account Profile with History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Role Distribution",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/summary/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "summary",
+                "roles"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📁 Notification Feed",
+      "item": [
+        {
+          "name": "1. My Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications?unreadOnly=true&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "unreadOnly",
+                  "value": "true",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Mark One Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Mark All Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "read-all"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📁 Activity Audit Log (ADMIN)",
+      "item": [
+        {
+          "name": "1. Audit Trail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/activity?action=LOGIN&userId=&page=1&limit=25",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activity"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "LOGIN",
+                  "disabled": true
+                },
+                {
+                  "key": "userId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Actions: LOGIN, RESERVATION_CREATED, RESERVATION_UPDATED, PAYMENT_PROCESSED, PAYMENT_REFUNDED, INVENTORY_CHANGED, DOCUMENT_UPLOADED, DOCUMENT_REVIEWED."
+          }
+        }
+      ]
+    }
+  ]
 }

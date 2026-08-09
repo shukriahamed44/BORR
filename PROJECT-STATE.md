@@ -65,12 +65,15 @@ Roles: **ADMIN, STAFF, WAREHOUSE_OPERATOR, CUSTOMER**.
 | 1 | Batched migration (Upload, Notification, ActivityLog) | ✅ done |
 | 2a | Reservations backend (state machine + uploads) | ✅ done |
 | 2b | Reservations page UI | ✅ done |
-| 3 | **Inventory & warehouse page** | ⏭️ **NEXT** |
-| 4a | Payments backend w/ Stripe-style adapter | ⬜ pending |
-| 4b | Payments & checkout page UI | ⬜ pending |
-| 5 | Customers directory & document verification | ⬜ pending |
-| 6 | Settings & profile page | ⬜ pending |
-| 7 | Cross-cutting close-out (audit log, notifications, docs) | ⬜ pending |
+| 3 | Inventory & warehouse page | ✅ done |
+| 4a | Payments backend w/ Stripe-style adapter | ✅ done |
+| 4b | Payments & checkout page UI | ✅ done |
+| 5 | Customers directory & document verification | ✅ done |
+| 6 | Settings & profile page | ✅ done |
+| 7 | Cross-cutting close-out (audit log, notifications, docs) | ✅ done |
+
+**All 10 phases complete.** All 8 UI pages exist and are wired to the API; the schema matches
+the assessment spec; audit logging, the notification feed and the documentation are done.
 
 Plus, completed before the checklist existed: **App Shell**, **Dashboard**, **Equipment Catalog**.
 
@@ -139,11 +142,18 @@ Plus, completed before the checklist existed: **App Shell**, **Dashboard**, **Eq
 
 ## 7. Known gaps / not done yet
 
-- **`ActivityLog` table exists but nothing writes to it.** The assessment explicitly requires audit
-  logs for login, reservation created/updated, payment, inventory changes. Phase 7.
-- **`Notification` table exists but is unused** — the bell still derives alerts from reservations. Phase 7.
-- **`README.md` is inaccurate**: it claims 9 models including a `Role` table and describes a schema
-  that does not match. Demo credentials were corrected, but the schema/ERD sections still need a pass.
+- **Mobile APK not built.** Run `cd mobile && flutter build apk --debug`.
+- **Password change does not revoke existing refresh tokens.** Other devices stay signed in until
+  their 7-day token expires. Needs a token store or a `passwordChangedAt` check in the refresh flow.
+- **Payment is not gated before pickup.** Staff can approve and hand over an unpaid reservation;
+  nothing enforces settlement first. Not required by the assessment.
+- **Flutter app and `web/` (Next.js) were not touched** in this build.
+- **No new automated tests** were written (pre-existing `.spec.ts` files remain).
+- A stray test account, `probe.*@test.com`, may exist in the directory from API probing.
+
+Resolved in Phase 7: `ActivityLog` is now written on every significant action, the notification
+bell reads the real `Notification` table, and `README.md` / `erp_diagram.md` / the Postman
+collection have been corrected to match the implementation.
 - Equipment images: `Product.imageUrl` points at `/equipment/<sku-lowercase>.jpg` in
   `frontend/public/equipment/`. **The user will supply images later**; until then cards render a
   placeholder labelled with the SKU. Full SKU→filename table is in `RUNBOOK.md` §7.

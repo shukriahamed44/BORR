@@ -10,24 +10,29 @@
  */
 
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { Role } from '@prisma/client';
+import { ActivityAction, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ActivityService } from '../activity/activity.service';
 import { RegisterDto } from './dto/register.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ChangePasswordDto, UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private activity: ActivityService,
   ) {}
 
   /**
@@ -111,7 +116,7 @@ export class AuthService {
   /**
    * Validates user credentials and issues access & refresh tokens on successful authentication.
    */
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto, ipAddress?: string) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -127,6 +132,15 @@ export class AuthService {
     }
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
+
+    await this.activity.record({
+      userId: user.id,
+      action: ActivityAction.LOGIN,
+      entityType: 'User',
+      entityId: user.id,
+      metadata: { email: user.email, role: user.role },
+      ipAddress,
+    });
 
     return {
       message: 'Login successful.',
@@ -228,5 +242,79 @@ export class AuthService {
       refreshToken,
       expiresIn: 900, // 15 minutes in seconds
     };
+  }
+
+  /**
+   * Updates the authenticated user's own profile fields.
+   * The user id comes from the verified JWT, never from the request body, so this cannot be
+   * pointed at another account.
+   */
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Account not found.');
+    }
+
+    // Email is the login identifier, so a change must not collide with another account.
+    if (dto.email && dto.email.toLowerCase() !== user.email.toLowerCase()) {
+      const taken = await this.prisma.user.findUnique({
+        where: { email: dto.email },
+      });
+      if (taken) {
+        throw new ConflictException('That email address is already in use.');
+      }
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name } : {}),
+        ...(dto.email !== undefined ? { email: dto.email } : {}),
+        // An empty string clears the optional phone number rather than storing "".
+        ...(dto.phone !== undefined ? { phone: dto.phone || null } : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        updatedAt: true,
+      },
+    });
+
+    return { message: 'Profile updated successfully.', user: updated };
+  }
+
+  /**
+   * Rotates the authenticated user's password after verifying the current one.
+   * Existing refresh tokens are not revoked — see the note in the controller docs.
+   */
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Account not found.');
+    }
+
+    const currentValid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!currentValid) {
+      // Deliberately vague: do not confirm whether the account exists or which field failed.
+      throw new UnauthorizedException('Current password is incorrect.');
+    }
+
+    const sameAsOld = await bcrypt.compare(dto.newPassword, user.passwordHash);
+    if (sameAsOld) {
+      throw new BadRequestException('The new password must differ from the current password.');
+    }
+
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(dto.newPassword, saltRounds);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    return { message: 'Password changed successfully.' };
   }
 }

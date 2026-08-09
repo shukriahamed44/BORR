@@ -4,6 +4,8 @@
  * Handles Bearer token injection, request/response serialization, error mapping, and live data fetching.
  */
 
+import type { Role } from '../types/auth';
+
 // Backend mounts every route under the /api/v1 version prefix (see backend/src/main.ts).
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
@@ -126,6 +128,18 @@ export const authApi = {
     }),
 
   getProfile: () => request<{ user: any }>('/auth/me'),
+
+  updateProfile: (data: { name?: string; email?: string; phone?: string }) =>
+    request<{ message: string; user: any }>('/auth/me', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    request<{ message: string }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
 
 // ── Dashboard Analytics Services ────────────────────────────────────────
@@ -376,33 +390,183 @@ export const reservationsApi = {
 };
 
 // ── Inventory Log Services ──────────────────────────────────────────────
+export type InventoryAction = 'RECEIVE' | 'RELEASE' | 'DAMAGE_RECORDED' | 'MAINTENANCE';
+
+export interface InventoryLog {
+  id: string;
+  action: InventoryAction;
+  quantity: number;
+  notes?: string | null;
+  timestamp: string;
+  product?: { id: string; name: string; sku: string };
+  operator?: { id: string; name: string; email: string; role: string };
+}
+
+// ── Notification Feed Services ──────────────────────────────────────────
+export type NotificationType =
+  | 'RESERVATION_APPROVED'
+  | 'RESERVATION_REJECTED'
+  | 'UPCOMING_RETURN'
+  | 'RESERVATION_EXPIRED'
+  | 'PAYMENT_RECEIVED'
+  | 'DOCUMENT_VERIFIED';
+
+export interface NotificationRecord {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  entityType?: string | null;
+  entityId?: string | null;
+  readAt?: string | null;
+  createdAt: string;
+}
+
+export const notificationsApi = {
+  list: (opts: { unreadOnly?: boolean; limit?: number } = {}) =>
+    request<{ count: number; unreadCount: number; notifications: NotificationRecord[] }>(
+      `/notifications${toQueryString(opts as Record<string, unknown>)}`,
+    ),
+
+  markRead: (id: string) =>
+    request<{ message: string }>(`/notifications/${id}/read`, { method: 'PATCH' }),
+
+  markAllRead: () =>
+    request<{ message: string; updated: number }>('/notifications/read-all', {
+      method: 'PATCH',
+    }),
+};
+
+// ── User Directory Services (STAFF / ADMIN) ─────────────────────────────
+export type VerificationStatus = 'VERIFIED' | 'PENDING_REVIEW' | 'UNVERIFIED';
+
+export interface DirectoryUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  role: Role;
+  createdAt: string;
+  reservationCount: number;
+  documentCount: number;
+  totalSpend: number;
+  documents: { pending: number; verified: number; rejected: number };
+  verificationStatus: VerificationStatus;
+}
+
+export interface UserPage {
+  count: number;
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  roleCounts: Partial<Record<Role, number>>;
+  users: DirectoryUser[];
+}
+
+export interface UserProfileDetail {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  role: Role;
+  createdAt: string;
+  reservations: any[];
+  uploads: UploadRecord[];
+  stats: {
+    reservationCount: number;
+    activeReservations: number;
+    totalSpend: number;
+    documentCount: number;
+    pendingDocuments: number;
+  };
+}
+
+export const usersApi = {
+  list: (query: { role?: Role; search?: string; page?: number; limit?: number } = {}) =>
+    request<UserPage>(`/users${toQueryString(query as Record<string, unknown>)}`),
+
+  getById: (id: string) => request<UserProfileDetail>(`/users/${id}`),
+};
+
 export const inventoryApi = {
   getLogs: async (productId?: string) =>
-    (await request<{ count: number; logs: any[] }>(
-      `/inventory/logs${productId ? `?productId=${productId}` : ''}`,
+    (await request<{ count: number; logs: InventoryLog[] }>(
+      `/inventory/logs${productId ? `?productId=${encodeURIComponent(productId)}` : ''}`,
     )).logs,
 
-  createLog: (data: { productId: string; action: string; quantity: number; notes?: string }) =>
-    request<any>('/inventory/logs', {
+  createLog: (data: {
+    productId: string;
+    action: InventoryAction;
+    quantity: number;
+    notes?: string;
+  }) =>
+    request<{ message: string; newStockLevel: number; log: InventoryLog }>('/inventory/logs', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 };
 
 // ── Payment Services ────────────────────────────────────────────────────
+export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+
+export interface PaymentRecord {
+  id: string;
+  reservationId: string;
+  amount: string | number;
+  status: PaymentStatus;
+  transactionId?: string | null;
+  provider?: string | null;
+  failureReason?: string | null;
+  refundedAt?: string | null;
+  createdAt: string;
+  reservation?: {
+    id: string;
+    startDate: string;
+    endDate: string;
+    status: string;
+    user?: { id: string; name: string; email: string };
+  };
+}
+
+export interface PaymentPage {
+  count: number;
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  statusCounts: Partial<Record<PaymentStatus, number>>;
+  totals: { collected: number; refunded: number };
+  payments: PaymentRecord[];
+}
+
 export const paymentsApi = {
-  processPayment: (data: { reservationId: string; amount: number; paymentMethod?: string }) =>
-    request<any>('/payments/process', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+  list: (query: {
+    status?: PaymentStatus;
+    reservationId?: string;
+    page?: number;
+    limit?: number;
+  } = {}) => request<PaymentPage>(`/payments${toQueryString(query as Record<string, unknown>)}`),
+
+  processPayment: (data: {
+    reservationId: string;
+    amount: number;
+    paymentMethod?: string;
+    simulateFailure?: boolean;
+  }) =>
+    request<{ message: string; status: string; payment: PaymentRecord; clientSecret: string }>(
+      '/payments/process',
+      { method: 'POST', body: JSON.stringify(data) },
+    ),
 
   refundPayment: (data: { paymentId: string; reason?: string }) =>
-    request<any>('/payments/refund', {
+    request<{ message: string; payment: PaymentRecord }>('/payments/refund', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  getByReservation: (reservationId: string) =>
-    request<any[]>(`/payments/reservation/${reservationId}`),
+  getByReservation: async (reservationId: string) =>
+    (await request<{ count: number; payments: PaymentRecord[] }>(
+      `/payments/reservation/${reservationId}`,
+    )).payments,
 };

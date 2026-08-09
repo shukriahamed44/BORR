@@ -1,249 +1,437 @@
-import React, { useEffect, useState } from 'react';
+/**
+ * FORMAL ARCHITECTURAL DESCRIPTION:
+ * Inventory & Warehouse Operations page. Presents live stock levels per equipment SKU alongside
+ * the immutable audit trail returned by `GET /api/v1/inventory/logs`. Warehouse actions
+ * (`RECEIVE`, `RELEASE`, `DAMAGE_RECORDED`, `MAINTENANCE`) are submitted through
+ * `POST /api/v1/inventory/logs`, which mutates `Product.totalStock` and writes the log entry
+ * inside a single Prisma transaction.
+ *
+ * IN SIMPLE WORDS:
+ * The warehouse screen. Shows how many of each item are in stock, lets operators record
+ * deliveries, dispatches, damage and maintenance, and keeps a running history of every change.
+ */
+
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import './InventoryPage.css';
 import type { Role } from '../../types/auth';
-import { inventoryApi, productsApi } from '../../services/api';
+import {
+  inventoryApi,
+  productsApi,
+  type InventoryAction,
+  type InventoryLog,
+  type Product,
+} from '../../services/api';
 
 interface InventoryPageProps {
   currentRole: Role;
 }
 
+/** Threshold at which stock is surfaced as low; mirrors the dashboard's lowStock query. */
+const LOW_STOCK_AT = 3;
+
+const ACTIONS: {
+  value: InventoryAction;
+  label: string;
+  blurb: string;
+  effect: 'add' | 'remove' | 'none';
+  icon: string;
+}[] = [
+  {
+    value: 'RECEIVE',
+    label: 'Receive',
+    blurb: 'Stock arriving into the warehouse',
+    effect: 'add',
+    icon: '📥',
+  },
+  {
+    value: 'RELEASE',
+    label: 'Release',
+    blurb: 'Dispatch for an approved reservation',
+    effect: 'remove',
+    icon: '📤',
+  },
+  {
+    value: 'DAMAGE_RECORDED',
+    label: 'Damage',
+    blurb: 'Write off damaged units',
+    effect: 'remove',
+    icon: '⚠️',
+  },
+  {
+    value: 'MAINTENANCE',
+    label: 'Service',
+    blurb: 'Log servicing — stock level unchanged',
+    effect: 'none',
+    icon: '🔧',
+  },
+];
+
+const ACTION_META: Record<InventoryAction, { label: string; tone: string }> = {
+  RECEIVE: { label: 'Receive', tone: 'add' },
+  RELEASE: { label: 'Release', tone: 'remove' },
+  DAMAGE_RECORDED: { label: 'Damage', tone: 'danger' },
+  MAINTENANCE: { label: 'Maintenance', tone: 'neutral' },
+};
+
+const when = (ts: string) =>
+  new Date(ts).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
 export const InventoryPage: React.FC<InventoryPageProps> = ({ currentRole }) => {
-  const [logs, setLogs] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [isLogModalOpen, setIsLogModalOpen] = useState<boolean>(false);
+  // The backend allows WAREHOUSE_OPERATOR, STAFF and ADMIN to record inventory actions.
+  const canRecord =
+    currentRole === 'WAREHOUSE_OPERATOR' || currentRole === 'STAFF' || currentRole === 'ADMIN';
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [logs, setLogs] = useState<InventoryLog[]>([]);
+  const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Modal Form State
-  const [selectedProductId, setSelectedProductId] = useState<string>('');
-  const [action, setAction] = useState<string>('RECEIVE');
-  const [quantity, setQuantity] = useState<string>('5');
-  const [notes, setNotes] = useState<string>('');
+  const [search, setSearch] = useState('');
+  const [lowOnly, setLowOnly] = useState(false);
+  const [logFilter, setLogFilter] = useState<string>('');
 
-  const fetchData = async () => {
+  const [action, setAction] = useState<{ product: Product; action: InventoryAction } | null>(null);
+
+  const flash = (text: string) => {
+    setMsg(text);
+    setTimeout(() => setMsg(null), 4500);
+  };
+
+  const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const [logsData, prodsData] = await Promise.all([
-        inventoryApi.getLogs(),
+      const [productList, logList] = await Promise.all([
         productsApi.getAll(),
+        inventoryApi.getLogs(),
       ]);
-      setLogs(logsData);
-      setProducts(prodsData);
-      if (prodsData.length > 0) setSelectedProductId(prodsData[0].id);
+      setProducts(productList);
+      setLogs(logList);
     } catch (err: any) {
-      console.error('Failed to load inventory logs:', err);
+      setError(err.message || 'Could not load inventory.');
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchData();
   }, []);
 
-  const handleCreateLog = async (e: React.FormEvent) => {
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const visibleProducts = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return products
+      .filter((p) => (lowOnly ? p.totalStock <= LOW_STOCK_AT : true))
+      .filter((p) =>
+        term ? p.name.toLowerCase().includes(term) || p.sku.toLowerCase().includes(term) : true,
+      )
+      .sort((a, b) => a.totalStock - b.totalStock);
+  }, [products, search, lowOnly]);
+
+  const visibleLogs = useMemo(
+    () => (logFilter ? logs.filter((l) => l.product?.id === logFilter) : logs),
+    [logs, logFilter],
+  );
+
+  const totals = useMemo(
+    () => ({
+      skus: products.length,
+      units: products.reduce((sum, p) => sum + p.totalStock, 0),
+      low: products.filter((p) => p.totalStock <= LOW_STOCK_AT).length,
+      out: products.filter((p) => p.totalStock === 0).length,
+    }),
+    [products],
+  );
+
+  return (
+    <div className="inventory-page animate-fade-in">
+      {msg && <div className="page-toast success">{msg}</div>}
+      {error && <div className="page-toast error">{error}</div>}
+
+      {/* Stock summary */}
+      <div className="inv-summary">
+        <div className="inv-stat glass-panel">
+          <span className="inv-stat-label">Tracked SKUs</span>
+          <span className="inv-stat-value">{totals.skus}</span>
+        </div>
+        <div className="inv-stat glass-panel">
+          <span className="inv-stat-label">Units in stock</span>
+          <span className="inv-stat-value">{totals.units}</span>
+        </div>
+        <div className="inv-stat glass-panel">
+          <span className="inv-stat-label">Low stock</span>
+          <span className="inv-stat-value warn">{totals.low}</span>
+        </div>
+        <div className="inv-stat glass-panel">
+          <span className="inv-stat-label">Out of stock</span>
+          <span className="inv-stat-value danger">{totals.out}</span>
+        </div>
+      </div>
+
+      <div className="inv-layout">
+        {/* Stock table */}
+        <section className="glass-panel inv-panel">
+          <div className="panel-header">
+            <h3>Stock Levels</h3>
+            <label className="filter-checkbox">
+              <input
+                type="checkbox"
+                checked={lowOnly}
+                onChange={(e) => setLowOnly(e.target.checked)}
+              />
+              <span>Low stock only</span>
+            </label>
+          </div>
+
+          <div className="inv-search liquid-glass-search">
+            <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              className="header-search-input"
+              placeholder="Search equipment or SKU…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          {loading ? (
+            <div className="dash-empty">Loading stock…</div>
+          ) : visibleProducts.length === 0 ? (
+            <div className="dash-empty">No equipment matches this view.</div>
+          ) : (
+            <div className="table-responsive">
+              <table className="glass-table">
+                <thead>
+                  <tr>
+                    <th>Equipment</th>
+                    <th>SKU</th>
+                    <th>In stock</th>
+                    {canRecord && <th>Warehouse actions</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleProducts.map((p) => {
+                    const out = p.totalStock === 0;
+                    const low = !out && p.totalStock <= LOW_STOCK_AT;
+                    return (
+                      <tr key={p.id} className={out ? 'row-out' : low ? 'row-low' : ''}>
+                        <td>
+                          <button
+                            className="inv-name-btn"
+                            onClick={() => setLogFilter(logFilter === p.id ? '' : p.id)}
+                            title="Filter the activity log by this item"
+                          >
+                            {p.name}
+                          </button>
+                        </td>
+                        <td>
+                          <span className="id-code">{p.sku}</span>
+                        </td>
+                        <td>
+                          <span className={`stock-badge ${out ? 'out' : low ? 'low' : 'ok'}`}>
+                            {p.totalStock} {out ? '· out' : low ? '· low' : 'units'}
+                          </span>
+                        </td>
+                        {canRecord && (
+                          <td>
+                            <div className="inv-actions">
+                              {ACTIONS.map((a) => (
+                                <button
+                                  key={a.value}
+                                  className={`inv-action-btn tone-${a.effect}`}
+                                  // Deductions are impossible at zero stock; the server rejects
+                                  // them anyway, so don't offer a button that must fail.
+                                  disabled={a.effect === 'remove' && p.totalStock === 0}
+                                  title={a.blurb}
+                                  onClick={() => setAction({ product: p, action: a.value })}
+                                >
+                                  {a.label}
+                                </button>
+                              ))}
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        {/* Audit trail */}
+        <section className="glass-panel inv-panel">
+          <div className="panel-header">
+            <h3>Activity Audit Log</h3>
+            {logFilter && (
+              <button className="btn-link" onClick={() => setLogFilter('')}>
+                Clear filter
+              </button>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="dash-empty">Loading history…</div>
+          ) : visibleLogs.length === 0 ? (
+            <div className="dash-empty">No inventory activity recorded yet.</div>
+          ) : (
+            <ol className="timeline">
+              {visibleLogs.map((log) => {
+                const meta = ACTION_META[log.action];
+                return (
+                  <li className="timeline-row" key={log.id}>
+                    <span className={`timeline-dot dot-${meta.tone}`} />
+                    <div className="timeline-body">
+                      <div className="timeline-head">
+                        <span className={`action-chip chip-${meta.tone}`}>{meta.label}</span>
+                        <span className="timeline-qty">
+                          {log.action === 'RECEIVE' ? '+' : log.action === 'MAINTENANCE' ? '' : '−'}
+                          {log.quantity}
+                        </span>
+                        <span className="timeline-time">{when(log.timestamp)}</span>
+                      </div>
+                      <div className="timeline-product">{log.product?.name ?? 'Equipment'}</div>
+                      {log.notes && <div className="timeline-notes">{log.notes}</div>}
+                      <div className="timeline-operator">
+                        by {log.operator?.name ?? 'Unknown'}
+                        {log.operator?.role ? ` · ${log.operator.role.replace('_', ' ')}` : ''}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </section>
+      </div>
+
+      {action && (
+        <InventoryActionModal
+          product={action.product}
+          action={action.action}
+          onClose={() => setAction(null)}
+          onDone={(text) => {
+            setAction(null);
+            flash(text);
+            load();
+          }}
+          onError={setError}
+        />
+      )}
+    </div>
+  );
+};
+
+/* ── Warehouse action dialog ────────────────────────────────────────────── */
+
+const InventoryActionModal: React.FC<{
+  product: Product;
+  action: InventoryAction;
+  onClose: () => void;
+  onDone: (msg: string) => void;
+  onError: (msg: string) => void;
+}> = ({ product, action, onClose, onDone, onError }) => {
+  const meta = ACTIONS.find((a) => a.value === action)!;
+  const [quantity, setQuantity] = useState(1);
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const projected =
+    meta.effect === 'add'
+      ? product.totalStock + quantity
+      : meta.effect === 'remove'
+      ? product.totalStock - quantity
+      : product.totalStock;
+
+  // Mirrors the server guard: a deduction may not exceed available stock.
+  const exceedsStock = meta.effect === 'remove' && quantity > product.totalStock;
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (exceedsStock) return;
+    setSubmitting(true);
     try {
-      await inventoryApi.createLog({
-        productId: selectedProductId,
+      const res = await inventoryApi.createLog({
+        productId: product.id,
         action,
-        quantity: parseInt(quantity, 10),
-        notes,
+        quantity,
+        notes: notes.trim() || undefined,
       });
-      setMsg(`Inventory action ${action} recorded successfully!`);
-      setIsLogModalOpen(false);
-      setNotes('');
-      fetchData();
-      setTimeout(() => setMsg(null), 4000);
+      onDone(`${meta.label} recorded — ${product.name} now at ${res.newStockLevel} units.`);
     } catch (err: any) {
-      alert(`Failed to record log: ${err.message}`);
+      onError(err.message || 'Inventory action failed.');
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="inventory-page animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#0F172A', fontFamily: 'var(--font-body)' }}>
-            📦 Warehouse Inventory & Stock Audit Logs
-          </h2>
-          <p style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
-            Real-time stock movement, receives, releases, damage records, and maintenance logs
-          </p>
-        </div>
+    <div className="auth-overlay" onClick={onClose}>
+      <div className="liquid-glass-modal booking-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="auth-close-btn" onClick={onClose} aria-label="Close">
+          ✕
+        </button>
 
-        {(currentRole === 'WAREHOUSE_OPERATOR' || currentRole === 'STAFF' || currentRole === 'ADMIN') && (
-          <button
-            onClick={() => setIsLogModalOpen(true)}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '9999px',
-              background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
-              color: '#FFFFFF',
-              border: 'none',
-              fontWeight: 600,
-              fontSize: '13px',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
-            }}
-          >
-            + Record Inventory Action
-          </button>
-        )}
-      </div>
+        <h3 className="auth-title booking-title">
+          {meta.icon} {meta.label}
+        </h3>
+        <p className="booking-product">{product.name}</p>
 
-      {msg && (
-        <div style={{
-          padding: '12px 20px',
-          borderRadius: '16px',
-          background: 'rgba(16, 185, 129, 0.15)',
-          border: '1px solid rgba(16, 185, 129, 0.4)',
-          color: '#059669',
-          fontWeight: 600,
-          fontSize: '13.5px',
-        }}>
-          ✅ {msg}
-        </div>
-      )}
-
-      {/* Audit Log Table */}
-      <div className="glass-panel">
-        <div className="table-responsive">
-          <table className="glass-table">
-            <thead>
-              <tr>
-                <th>Log Timestamp</th>
-                <th>Equipment Product</th>
-                <th>Action Type</th>
-                <th>Stock Quantity Change</th>
-                <th>Operator</th>
-                <th>Notes / Audit Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '30px', color: '#64748B' }}>
-                    Loading warehouse logs...
-                  </td>
-                </tr>
-              ) : logs.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '30px', color: '#64748B' }}>
-                    No inventory logs recorded yet.
-                  </td>
-                </tr>
-              ) : (
-                logs.map((log) => (
-                  <tr key={log.id}>
-                    <td>{new Date(log.timestamp).toLocaleString()}</td>
-                    <td style={{ fontWeight: 600 }}>{log.product?.name || 'Equipment'}</td>
-                    <td>
-                      <span className={`status-tag ${
-                        log.action === 'RECEIVE' ? 'success' : log.action === 'RELEASE' ? 'info' : 'danger'
-                      }`}>
-                        {log.action}
-                      </span>
-                    </td>
-                    <td style={{
-                      fontWeight: 700,
-                      color: log.quantity > 0 ? '#059669' : '#DC2626',
-                    }}>
-                      {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
-                    </td>
-                    <td>{log.operator?.name || log.operator?.email || 'Warehouse Staff'}</td>
-                    <td style={{ fontSize: '12.5px', color: '#64748B' }}>{log.notes || '—'}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Record Action Modal */}
-      {isLogModalOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(15, 23, 42, 0.5)',
-          backdropFilter: 'blur(8px)',
-          zIndex: 300,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          <div className="glass-panel" style={{ width: '450px', background: '#FFFFFF', padding: '28px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>Record Warehouse Action</h3>
-            <form onSubmit={handleCreateLog} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>Select Equipment Item</label>
-                <select
-                  value={selectedProductId}
-                  onChange={(e) => setSelectedProductId(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', marginTop: '4px' }}
-                >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.sku}) — Current Stock: {p.totalStock}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>Action Type</label>
-                <select
-                  value={action}
-                  onChange={(e) => setAction(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', marginTop: '4px' }}
-                >
-                  <option value="RECEIVE">RECEIVE (Add new shipment stock)</option>
-                  <option value="RELEASE">RELEASE (Dispatch equipment to customer)</option>
-                  <option value="DAMAGE_RECORDED">DAMAGE_RECORDED (Quarantine damaged unit)</option>
-                  <option value="MAINTENANCE">MAINTENANCE (Send for repair/service)</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>Quantity</label>
-                <input
-                  type="number"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', marginTop: '4px' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>Audit Notes / Inspection Details</label>
-                <textarea
-                  rows={3}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="e.g. Received shipment batch #104..."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', marginTop: '4px' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '12px' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsLogModalOpen(false)}
-                  style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #CBD5E1', background: 'none', cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{ padding: '8px 20px', borderRadius: '8px', background: '#2563EB', color: '#FFF', border: 'none', fontWeight: 600, cursor: 'pointer' }}
-                >
-                  Save Log Entry
-                </button>
-              </div>
-            </form>
+        <form className="auth-form" onSubmit={submit}>
+          <div className="auth-field">
+            <label className="auth-label">Quantity</label>
+            <input
+              type="number"
+              className="auth-input booking-input"
+              min={1}
+              max={meta.effect === 'remove' ? product.totalStock : undefined}
+              value={quantity}
+              onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
+              required
+            />
           </div>
-        </div>
-      )}
+
+          {exceedsStock && (
+            <div className="auth-error">
+              Only {product.totalStock} unit{product.totalStock === 1 ? '' : 's'} available.
+            </div>
+          )}
+
+          <div className="auth-field">
+            <label className="auth-label">Notes (optional)</label>
+            <textarea
+              className="auth-input booking-input booking-textarea"
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder={meta.blurb}
+            />
+          </div>
+
+          <div className="booking-summary">
+            <div className="booking-line">
+              <span>Current stock</span>
+              <span>{product.totalStock}</span>
+            </div>
+            <div className="booking-line total">
+              <span>After this action</span>
+              <span>{meta.effect === 'none' ? `${product.totalStock} (unchanged)` : projected}</span>
+            </div>
+          </div>
+
+          <button type="submit" className="btn-auth-submit" disabled={submitting || exceedsStock}>
+            {submitting ? 'Recording…' : `Confirm ${meta.label}`}
+          </button>
+        </form>
+      </div>
     </div>
   );
 };

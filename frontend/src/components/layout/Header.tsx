@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { Role, UserProfile, NavigationItemId } from '../../types/auth';
-import { reservationsApi } from '../../services/api';
+import { notificationsApi, type NotificationRecord } from '../../services/api';
 
 interface HeaderProps {
   currentUser: UserProfile;
@@ -13,85 +13,25 @@ interface HeaderProps {
   onSignOut: () => void;
 }
 
-interface Alert {
-  id: string;
-  title: string;
-  desc: string;
-  time: string;
-  type: 'warning' | 'danger' | 'success' | 'info';
-}
+/** Maps a notification type to the indicator colour used in the popover. */
+const NOTIFICATION_TONE: Record<string, 'warning' | 'danger' | 'success' | 'info'> = {
+  RESERVATION_APPROVED: 'success',
+  RESERVATION_REJECTED: 'danger',
+  UPCOMING_RETURN: 'warning',
+  RESERVATION_EXPIRED: 'danger',
+  PAYMENT_RECEIVED: 'success',
+  DOCUMENT_VERIFIED: 'info',
+};
 
-/** Days between now and a date string (negative = already past). */
-function daysUntil(dateStr: string): number {
-  const ms = new Date(dateStr).getTime() - Date.now();
-  return Math.ceil(ms / 86_400_000);
-}
-
-/**
- * The backend exposes no notifications-feed endpoint (only test-email / test-push),
- * so the bell derives its alerts from live reservation data: pending approvals,
- * upcoming returns, and overdue returns.
- */
-function deriveAlerts(reservations: any[], role: Role): Alert[] {
-  const alerts: Alert[] = [];
-
-  for (const r of reservations) {
-    const ref = r.id ? `#${String(r.id).slice(0, 8)}` : '';
-    const customer = r.user?.name || r.user?.email || 'A customer';
-
-    if (r.status === 'PENDING' && role !== 'CUSTOMER') {
-      alerts.push({
-        id: `pending-${r.id}`,
-        title: 'Reservation Awaiting Approval',
-        desc: `${customer} submitted reservation ${ref}`,
-        time: r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '',
-        type: 'warning',
-      });
-    }
-
-    if ((r.status === 'ACTIVE' || r.status === 'APPROVED') && r.endDate) {
-      const days = daysUntil(r.endDate);
-      if (days < 0) {
-        alerts.push({
-          id: `overdue-${r.id}`,
-          title: 'Return Overdue',
-          desc: `Reservation ${ref} was due ${Math.abs(days)} day(s) ago`,
-          time: new Date(r.endDate).toLocaleDateString(),
-          type: 'danger',
-        });
-      } else if (days <= 3) {
-        alerts.push({
-          id: `due-${r.id}`,
-          title: 'Upcoming Return',
-          desc: `Reservation ${ref} is due in ${days} day(s)`,
-          time: new Date(r.endDate).toLocaleDateString(),
-          type: 'info',
-        });
-      }
-    }
-
-    if (r.status === 'APPROVED' && role === 'CUSTOMER') {
-      alerts.push({
-        id: `approved-${r.id}`,
-        title: 'Reservation Approved',
-        desc: `Your reservation ${ref} was approved`,
-        time: r.updatedAt ? new Date(r.updatedAt).toLocaleDateString() : '',
-        type: 'success',
-      });
-    }
-    if (r.status === 'REJECTED' && role === 'CUSTOMER') {
-      alerts.push({
-        id: `rejected-${r.id}`,
-        title: 'Reservation Rejected',
-        desc: r.rejectionReason || `Your reservation ${ref} was rejected`,
-        time: r.updatedAt ? new Date(r.updatedAt).toLocaleDateString() : '',
-        type: 'danger',
-      });
-    }
-  }
-
-  return alerts;
-}
+/** Compact relative timestamp for the notification list. */
+const relativeTime = (iso: string) => {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs} hour${hrs === 1 ? '' : 's'} ago`;
+  return new Date(iso).toLocaleDateString();
+};
 
 export const Header: React.FC<HeaderProps> = ({
   currentUser,
@@ -105,27 +45,50 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const headerRef = useRef<HTMLElement>(null);
 
+  /** Reads the persisted notification feed; the badge shows unread only. */
+  const loadNotifications = useCallback(async () => {
+    try {
+      const data = await notificationsApi.list({ limit: 15 });
+      setNotifications(data.notifications);
+      setUnreadCount(data.unreadCount);
+    } catch {
+      setNotifications([]);
+      setUnreadCount(0);
+    }
+  }, []);
+
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
+    loadNotifications();
+    // Poll so approvals and return reminders surface without a manual refresh.
+    const timer = setInterval(loadNotifications, 60_000);
+    return () => clearInterval(timer);
+  }, [loadNotifications]);
+
+  const markAllRead = async () => {
+    try {
+      await notificationsApi.markAllRead();
+      loadNotifications();
+    } catch {
+      /* leave the badge as-is if the call fails */
+    }
+  };
+
+  const openNotification = async (n: NotificationRecord) => {
+    if (!n.readAt) {
       try {
-        const reservations = await reservationsApi.getAll();
-        if (!cancelled) setAlerts(deriveAlerts(reservations, currentRole));
+        await notificationsApi.markRead(n.id);
+        loadNotifications();
       } catch {
-        if (!cancelled) setAlerts([]);
+        /* non-fatal */
       }
-    };
-    load();
-    // Poll so approvals/returns surface without a manual refresh.
-    const timer = setInterval(load, 60_000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [currentRole]);
+    }
+    setShowNotifications(false);
+    onSelectNav('reservations');
+  };
 
   // Close popovers on outside click.
   useEffect(() => {
@@ -219,8 +182,8 @@ export const Header: React.FC<HeaderProps> = ({
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
-            {alerts.length > 0 && (
-              <span className="notification-badge-count">{alerts.length}</span>
+            {unreadCount > 0 && (
+              <span className="notification-badge-count">{unreadCount}</span>
             )}
           </button>
 
@@ -228,7 +191,12 @@ export const Header: React.FC<HeaderProps> = ({
           {showNotifications && (
             <div className="notifications-popover liquid-glass-popover">
               <div className="popover-header">
-                <span>SYSTEM NOTIFICATIONS</span>
+                <span>NOTIFICATIONS</span>
+                {unreadCount > 0 && (
+                  <button className="popover-mark-read" onClick={markAllRead}>
+                    Mark all read
+                  </button>
+                )}
                 <button
                   className="popover-close"
                   onClick={() => setShowNotifications(false)}
@@ -237,17 +205,25 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               </div>
 
-              {alerts.length === 0 ? (
+              {notifications.length === 0 ? (
                 <div className="notifications-empty">You're all caught up.</div>
               ) : (
                 <ul className="notifications-list">
-                  {alerts.map((n) => (
-                    <li key={n.id} className="notification-item">
-                      <div className={`notif-indicator indicator-${n.type}`} />
+                  {notifications.map((n) => (
+                    <li
+                      key={n.id}
+                      className={`notification-item ${n.readAt ? '' : 'unread'}`}
+                      onClick={() => openNotification(n)}
+                    >
+                      <div
+                        className={`notif-indicator indicator-${
+                          NOTIFICATION_TONE[n.type] ?? 'info'
+                        }`}
+                      />
                       <div className="notif-content">
                         <div className="notif-title">{n.title}</div>
-                        <div className="notif-desc">{n.desc}</div>
-                        <div className="notif-time">{n.time}</div>
+                        <div className="notif-desc">{n.body}</div>
+                        <div className="notif-time">{relativeTime(n.createdAt)}</div>
                       </div>
                     </li>
                   ))}

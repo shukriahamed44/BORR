@@ -15,6 +15,8 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -29,6 +31,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { ProcessPaymentDto } from './dto/process-payment.dto';
 import { RefundPaymentDto } from './dto/refund-payment.dto';
+import { QueryPaymentsDto } from './dto/query-payments.dto';
 import { PaymentsService } from './payments.service';
 
 @ApiTags('Payments')
@@ -44,8 +47,19 @@ export class PaymentsController {
   @ApiResponse({ status: 200, description: 'Payment processed successfully.' })
   @ApiResponse({ status: 400, description: 'Payment processing declined or parameter validation error.' })
   @ApiResponse({ status: 409, description: 'Reservation already paid.' })
-  async processPayment(@Body() dto: ProcessPaymentDto) {
-    return this.paymentsService.processPayment(dto);
+  async processPayment(@Request() req: any, @Body() dto: ProcessPaymentDto) {
+    return this.paymentsService.processPayment(dto, req.user);
+  }
+
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Paginated payment ledger with status filter (customers see only their own transactions)',
+  })
+  @ApiResponse({ status: 200, description: 'Payments retrieved with totals and status counts.' })
+  async findAll(@Request() req: any, @Query() query: QueryPaymentsDto) {
+    return this.paymentsService.findAll(req.user, query);
   }
 
   @Post('refund')
@@ -55,15 +69,18 @@ export class PaymentsController {
   @ApiResponse({ status: 200, description: 'Payment refunded successfully.' })
   @ApiResponse({ status: 400, description: 'Payment cannot be refunded in current status.' })
   @ApiResponse({ status: 403, description: 'Forbidden: Requires STAFF or ADMIN role.' })
-  async refundPayment(@Body() dto: RefundPaymentDto) {
-    return this.paymentsService.refundPayment(dto);
+  async refundPayment(@Request() req: any, @Body() dto: RefundPaymentDto) {
+    return this.paymentsService.refundPayment(dto, req.user.id);
   }
 
   @Get('reservation/:reservationId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get payment records for a specific reservation' })
   @ApiResponse({ status: 200, description: 'Payment records for reservation.' })
-  async findByReservation(@Param('reservationId') reservationId: string) {
-    return this.paymentsService.findByReservation(reservationId);
+  async findByReservation(
+    @Param('reservationId') reservationId: string,
+    @Request() req: any,
+  ) {
+    return this.paymentsService.findByReservation(reservationId, req.user);
   }
 }
