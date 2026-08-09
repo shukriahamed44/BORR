@@ -1,0 +1,109 @@
+---
+# Puts the app on the host Terraform built. Idempotent: safe to re-run for every deploy.
+#
+# Inputs come from --extra-vars (or the environment via scripts/cd.sh), never from this file:
+#   postgres_password, jwt_secret, jwt_refresh_secret
+#
+# Expects scripts/cd.sh to have produced:
+#   dist/backend.tar   — `git archive` of backend/, so only committed files ship
+#   frontend/dist/     — the built SPA
+
+- name: Deploy AmmuNation
+  hosts: app
+  become: true
+
+  vars:
+    app_dir: /opt/ammunation
+    postgres_user: ammunation
+    postgres_db: ammunation_db
+
+  tasks:
+    - name: Wait for SSH to come up
+      ansible.builtin.wait_for_connection:
+        timeout: 300
+
+    - name: Install docker and the compose plugin
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - docker-compose-v2
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Ensure docker is running and enabled
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create the app directory
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: "0755"
+
+    # Replaced wholesale each deploy so a deleted source file does not linger on the host.
+    - name: Reset the backend source directory
+      ansible.builtin.file:
+        path: "{{ app_dir }}/backend"
+        state: absent
+
+    - name: Ship the backend source
+      ansible.builtin.unarchive:
+        src: ../../dist/backend.tar
+        dest: "{{ app_dir }}"
+
+    - name: Ship the built frontend
+      ansible.builtin.copy:
+        src: ../../frontend/dist/
+        dest: "{{ app_dir }}/frontend-dist/"
+        mode: "0644"
+
+    - name: Ship the compose file
+      ansible.builtin.copy:
+        src: ../../docker-compose.prod.yml
+        dest: "{{ app_dir }}/docker-compose.prod.yml"
+        mode: "0644"
+
+    - name: Ship the nginx config
+      ansible.builtin.copy:
+        src: files/nginx.conf
+        dest: "{{ app_dir }}/nginx.conf"
+        mode: "0644"
+      notify: Reload nginx
+
+    - name: Write the environment file
+      ansible.builtin.template:
+        src: templates/env.j2
+        dest: "{{ app_dir }}/.env"
+        mode: "0600"      # holds the DB password and both JWT secrets
+
+    - name: Build and start the stack
+      ansible.builtin.command:
+        cmd: docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+        chdir: "{{ app_dir }}"
+      register: compose_up
+      changed_when: "'Started' in compose_up.stderr or 'Built' in compose_up.stderr"
+
+    - name: Wait for the site to answer
+      ansible.builtin.uri:
+        url: "http://{{ inventory_hostname }}/"
+        status_code: 200
+      register: probe
+      retries: 20
+      delay: 5
+      until: probe is succeeded
+      delegate_to: localhost
+      become: false
+
+    # Images pile up fast on a 20 GB disk when every deploy rebuilds the backend.
+    - name: Prune dangling images
+      ansible.builtin.command: docker image prune -f
+      changed_when: false
+
+  handlers:
+    - name: Reload nginx
+      ansible.builtin.command:
+        cmd: docker compose -f docker-compose.prod.yml restart nginx
+        chdir: "{{ app_dir }}"

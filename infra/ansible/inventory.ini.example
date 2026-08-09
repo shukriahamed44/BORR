@@ -1,0 +1,9 @@
+# `terraform apply` writes the real inventory.ini next to this file. This example is
+# only for deploying to a host Terraform does not manage.
+
+[app]
+203.0.113.10
+
+[app:vars]
+ansible_user=ubuntu
+ansible_python_interpreter=/usr/bin/python3

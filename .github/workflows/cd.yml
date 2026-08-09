@@ -1,0 +1,69 @@
+name: CD
+
+# Deploy is manual on purpose: one shared instance, no blue/green, so a bad merge should
+# not reach production on its own. Flip to `workflow_run` on CI success once there is a
+# staging environment to absorb the mistakes.
+on:
+  workflow_dispatch:
+    inputs:
+      provision:
+        description: "Run terraform apply before deploying"
+        type: boolean
+        default: false
+
+concurrency:
+  group: cd-production   # one deploy at a time — they share a host
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION || 'ap-south-1' }}
+
+      - uses: hashicorp/setup-terraform@v3
+        if: inputs.provision
+        with:
+          terraform_wrapper: false
+
+      - name: Provision
+        if: inputs.provision
+        run: ./scripts/cd.sh provision
+        env:
+          TF_VAR_key_name: ${{ secrets.EC2_KEY_NAME }}
+          TF_VAR_ssh_cidr: 0.0.0.0/0   # the runner IP is not stable; tighten if you self-host
+
+      # Terraform writes inventory.ini during provision. Without it (deploy-only runs),
+      # rebuild it from the secret so the two paths behave the same.
+      - name: Write inventory
+        if: ${{ !inputs.provision }}
+        run: |
+          printf '[app]\n%s\n\n[app:vars]\nansible_user=ubuntu\n' "${{ secrets.DEPLOY_HOST }}" \
+            > infra/ansible/inventory.ini
+
+      - name: Load the SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Deploy
+        run: ./scripts/cd.sh deploy
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}

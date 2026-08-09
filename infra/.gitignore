@@ -1,0 +1,9 @@
+# Terraform state holds resource ids and can hold secrets in plain text.
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/.terraform.lock.hcl
+terraform/terraform.tfvars
+
+# Written by terraform apply, not by hand.
+ansible/inventory.ini
