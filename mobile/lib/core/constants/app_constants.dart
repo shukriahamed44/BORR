@@ -12,9 +12,16 @@ import 'package:flutter/foundation.dart';
 
 class AppConstants {
   // ─── Backend API ─────────────────────────────────────────────────────────
-  // Web/Chrome uses localhost:3000, Android emulator uses 10.0.2.2:3000
-  static String get apiBaseUrl =>
-      kIsWeb ? 'http://localhost:3000/api/v1' : 'http://10.0.2.2:3000/api/v1';
+  // A real device is not on the emulator's loopback alias, so the host must be
+  // overridable at launch:
+  //   flutter run --dart-define=API_BASE_URL=http://192.168.1.5:3000/api/v1
+  // Falling back to localhost on web and the 10.0.2.2 emulator alias on Android.
+  static const String _override = String.fromEnvironment('API_BASE_URL');
+
+  static String get apiBaseUrl {
+    if (_override.isNotEmpty) return _override;
+    return kIsWeb ? 'http://localhost:3000/api/v1' : 'http://10.0.2.2:3000/api/v1';
+  }
 
   // ─── Secure Storage Keys ─────────────────────────────────────────────────
   static const String keyAccessToken = 'ammunation_access_token';
