@@ -192,29 +192,17 @@ export const EquipmentPage: React.FC<EquipmentPageProps> = ({ currentRole }) => 
 
   return (
     <div className="equipment-page animate-fade-in">
-      {msg && <div className="page-toast success">{msg}</div>}
-      {error && <div className="page-toast error">{error}</div>}
+      <Toasts message={msg} error={error} />
 
       {/* Toolbar */}
       <div className="equipment-toolbar">
-        <div className="equipment-search liquid-glass-search">
-          <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            type="text"
-            className="header-search-input"
-            placeholder="Search equipment by name, SKU or description…"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-          {searchInput && (
-            <button className="search-clear" onClick={() => setSearchInput('')} aria-label="Clear search">
-              ✕
-            </button>
-          )}
-        </div>
+        <SearchInput
+          className="equipment-search"
+          value={searchInput}
+          onChange={setSearchInput}
+          placeholder="Search equipment by name, SKU or description…"
+          clearable
+        />
 
         <select
           className="equipment-select"
@@ -315,7 +303,7 @@ export const EquipmentPage: React.FC<EquipmentPageProps> = ({ currentRole }) => 
           </div>
 
           {!loading && products.length === 0 ? (
-            <div className="glass-panel dash-empty">
+            <EmptyState panel>
               No equipment matches these filters.
               {hasActiveFilters && (
                 <>
@@ -325,7 +313,7 @@ export const EquipmentPage: React.FC<EquipmentPageProps> = ({ currentRole }) => 
                   </button>
                 </>
               )}
-            </div>
+            </EmptyState>
           ) : (
             <div className="equipment-grid">
               {products.map((p) => {
@@ -384,27 +372,7 @@ export const EquipmentPage: React.FC<EquipmentPageProps> = ({ currentRole }) => 
             </div>
           )}
 
-          {totalPages > 1 && (
-            <nav className="pagination">
-              <button
-                className="btn-small-glass"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                ← Prev
-              </button>
-              <span className="pagination-info">
-                Page {page} of {totalPages}
-              </span>
-              <button
-                className="btn-small-glass"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Next →
-              </button>
-            </nav>
-          )}
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
         </section>
       </div>
 

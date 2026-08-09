@@ -13,6 +13,7 @@
 
 import React, { useEffect, useState } from 'react';
 import './SettingsPage.css';
+import { Toasts } from '../ui';
 import type { Role, UserProfile } from '../../types/auth';
 import { authApi } from '../../services/api';
 
@@ -80,8 +81,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
   return (
     <div className="settings-page animate-fade-in">
-      {msg && <div className="page-toast success">{msg}</div>}
-      {error && <div className="page-toast error">{error}</div>}
+      <Toasts message={msg} error={error} />
 
       <div className="settings-layout">
         <div className="settings-column">

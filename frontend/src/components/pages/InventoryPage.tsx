@@ -13,6 +13,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import './InventoryPage.css';
+import { EmptyState, SearchInput, Toasts } from '../ui';
 import type { Role } from '../../types/auth';
 import {
   inventoryApi,
@@ -151,8 +152,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ currentRole }) => 
 
   return (
     <div className="inventory-page animate-fade-in">
-      {msg && <div className="page-toast success">{msg}</div>}
-      {error && <div className="page-toast error">{error}</div>}
+      <Toasts message={msg} error={error} />
 
       {/* Stock summary */}
       <div className="inv-summary">
@@ -189,23 +189,17 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ currentRole }) => 
             </label>
           </div>
 
-          <div className="inv-search liquid-glass-search">
-            <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input
-              className="header-search-input"
-              placeholder="Search equipment or SKU…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+          <SearchInput
+            className="inv-search"
+            value={search}
+            onChange={setSearch}
+            placeholder="Search equipment or SKU…"
+          />
 
           {loading ? (
-            <div className="dash-empty">Loading stock…</div>
+            <EmptyState>Loading stock…</EmptyState>
           ) : visibleProducts.length === 0 ? (
-            <div className="dash-empty">No equipment matches this view.</div>
+            <EmptyState>No equipment matches this view.</EmptyState>
           ) : (
             <div className="table-responsive">
               <table className="glass-table">
@@ -280,9 +274,9 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ currentRole }) => 
           </div>
 
           {loading ? (
-            <div className="dash-empty">Loading history…</div>
+            <EmptyState>Loading history…</EmptyState>
           ) : visibleLogs.length === 0 ? (
-            <div className="dash-empty">No inventory activity recorded yet.</div>
+            <EmptyState>No inventory activity recorded yet.</EmptyState>
           ) : (
             <ol className="timeline">
               {visibleLogs.map((log) => {
