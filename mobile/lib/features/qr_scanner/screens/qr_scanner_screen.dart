@@ -3,11 +3,12 @@
  * Equipment QR Code Scanner Screen (`qr_scanner_screen.dart`).
  * Uses mobile_scanner to open the device camera and decode QR codes.
  * On detecting an AmmuNation equipment QR (format: "ammunation:product:<id>"),
- * navigates to the ProductDetailScreen for verification and status update.
+ * opens StaffEquipmentScreen so the operator can verify the item and check it
+ * out or back in without leaving the staff shell.
  *
  * IN SIMPLE WORDS:
- * The camera scanner page — point at a QR code on equipment and it instantly
- * pulls up the product details in the app.
+ * The camera scanner page — point at a QR code on equipment and it pulls up that
+ * item, who currently holds it, and the hand-over / take-back buttons.
  */
 
 import 'package:flutter/material.dart';
@@ -65,7 +66,8 @@ class _QrScannerScreenState extends State<QrScannerScreen> with WidgetsBindingOb
       if (productId.isNotEmpty) {
         setState(() => _hasScanned = true);
         _controller.stop();
-        context.push('/catalog/$productId').then((_) {
+        // The scanner only exists in the staff shell, so stay in it.
+        context.push('/staff/equipment/$productId').then((_) {
           setState(() => _hasScanned = false);
           _controller.start();
         });

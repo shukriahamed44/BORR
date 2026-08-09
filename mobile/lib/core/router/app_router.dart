@@ -19,6 +19,7 @@ import '../../features/reservations/screens/reservations_screen.dart';
 import '../../features/reservations/screens/create_reservation_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/qr_scanner/screens/qr_scanner_screen.dart';
+import '../../features/staff/screens/staff_equipment_screen.dart';
 import '../../features/staff/screens/staff_reservations_screen.dart';
 import '../../shared/screens/splash_screen.dart';
 import '../../shared/shells/customer_shell.dart';
@@ -110,6 +111,14 @@ class AppRouter {
             GoRoute(
               path: '/staff/qr-scanner',
               builder: (_, __) => const QrScannerScreen(),
+            ),
+            // Scan destination — kept inside the staff shell so scanning does not
+            // drop a staff member into the customer navigation.
+            GoRoute(
+              path: '/staff/equipment/:id',
+              builder: (_, state) => StaffEquipmentScreen(
+                productId: state.pathParameters['id']!,
+              ),
             ),
             GoRoute(
               path: '/staff/notifications',
