@@ -144,7 +144,8 @@ project AmmuNation/
 - [x] **Source Code**: Backend (NestJS), Web (`frontend/`, Vite + React), Mobile (Flutter).
 - [x] **README & Deployment Instructions**: this document, plus `RUNBOOK.md` for environment setup.
 - [x] **ER Diagram**: `ER diagram.png` in the README, plus `erp_diagram.md` — Mermaid ERD + reservation state machine.
-- [x] **API Documentation**: Swagger at `http://localhost:3000/api/docs`, plus the endpoint tables below.
+- [x] **API Documentation**: committed OpenAPI 3.0 spec (`backend/docs/openapi.json`), offline HTML
+      reference (`backend/docs/api-reference.html`), live Swagger UI, and the endpoint tables below.
 - [x] **Database Script & Migrations**: `backend/prisma/migrations/` (3 migrations), applied with `npx prisma migrate deploy`.
 - [x] **Sample Data**: `npm run seed` (full reset) and `prisma/seed-catalog.ts` (idempotent, 6 categories + 16 products).
 - [x] **Postman Collection**: `backend/postman_collection.json`.
@@ -219,8 +220,17 @@ flutter run            # For Android / iOS Emulator
 
 ## 📖 API Documentation
 
-Interactive Swagger API documentation is available out of the box:
-👉 **`http://localhost:3000/api/docs`**
+The API is documented in three interchangeable forms, all generated from the same NestJS
+decorators — so none of them can drift from the implementation:
+
+| Form | Location | Needs the server running? |
+|---|---|---|
+| **OpenAPI 3.0 spec** | `backend/docs/openapi.json` | ❌ — commit-tracked; use for client generation, mocks, contract tests |
+| **Static reference** | `backend/docs/api-reference.html` | ❌ — open in any browser (Redoc) |
+| **Interactive Swagger UI** | `http://localhost:3000/api/docs` | ✅ — "Try it out" against a live server |
+
+The spec is rewritten on every boot outside production (**36 paths · 43 operations · 18 schemas**),
+so it always matches the running code.
 
 All routes are versioned under **`/api/v1`**. List endpoints return an envelope
 (`{ count, total, page, limit, totalPages, … }`), not a bare array.

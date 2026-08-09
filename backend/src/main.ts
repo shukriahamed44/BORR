@@ -11,7 +11,9 @@
 
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger';
+import { mkdirSync, writeFileSync } from 'fs';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
@@ -67,9 +69,59 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
+  // Export the spec to disk so the API contract is reviewable without running the server,
+  // and so it can drive client generation, mock servers and contract tests.
+  // Skipped in production, where the filesystem is typically read-only.
+  if (process.env.NODE_ENV !== 'production') {
+    writeOpenApiArtifacts(document, logger);
+  }
+
   const port = process.env.PORT || 3000;
   await app.listen(port);
   logger.log(`AmmuNation Backend running on http://localhost:${port}/api/v1`);
   logger.log(`Swagger OpenAPI Documentation available at http://localhost:${port}/api/docs`);
 }
+
+/**
+ * Writes `docs/openapi.json` plus a self-contained Redoc page. Regenerated on every boot,
+ * so the committed artefacts cannot drift from the decorators that produced them.
+ */
+function writeOpenApiArtifacts(document: OpenAPIObject, logger: Logger) {
+  try {
+    const docsDir = join(process.cwd(), 'docs');
+    mkdirSync(docsDir, { recursive: true });
+
+    writeFileSync(
+      join(docsDir, 'openapi.json'),
+      JSON.stringify(document, null, 2),
+      'utf8',
+    );
+
+    // Redoc renders the spec inline; the CDN script is the only external dependency,
+    // and the spec itself is embedded so the file works offline once cached.
+    const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AmmuNation ERP API Reference</title>
+    <style>body { margin: 0; padding: 0; }</style>
+  </head>
+  <body>
+    <div id="redoc"></div>
+    <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+    <script>
+      Redoc.init(${JSON.stringify(document)}, { hideDownloadButton: false, theme: { colors: { primary: { main: '#2563EB' } } } }, document.getElementById('redoc'));
+    </script>
+  </body>
+</html>`;
+
+    writeFileSync(join(docsDir, 'api-reference.html'), html, 'utf8');
+    logger.log('OpenAPI spec written to backend/docs/openapi.json + api-reference.html');
+  } catch (error) {
+    // Documentation output must never prevent the API from starting.
+    logger.warn(`Could not write OpenAPI artefacts: ${(error as Error).message}`);
+  }
+}
+
 bootstrap();

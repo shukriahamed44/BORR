@@ -1,0 +1,2101 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1": {
+      "get": {
+        "operationId": "AppController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/api/v1/activity": {
+      "get": {
+        "operationId": "ActivityController_findAll",
+        "parameters": [
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "LOGIN",
+                "RESERVATION_CREATED",
+                "RESERVATION_UPDATED",
+                "PAYMENT_PROCESSED",
+                "PAYMENT_REFUNDED",
+                "INVENTORY_CHANGED",
+                "DOCUMENT_UPLOADED",
+                "DOCUMENT_REVIEWED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit entries retrieved."
+          },
+          "403": {
+            "description": "Forbidden: requires ADMIN role."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Paginated audit trail of system activity (ADMIN only)",
+        "tags": [
+          "Activity Audit Log"
+        ]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User account created successfully with CUSTOMER role and JWT tokens."
+          },
+          "400": {
+            "description": "Validation failure on payload inputs."
+          },
+          "409": {
+            "description": "Email address already registered."
+          }
+        },
+        "summary": "Public self-registration for new Customer accounts",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/users": {
+      "post": {
+        "operationId": "AuthController_createUser",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Elevated user account created successfully."
+          },
+          "403": {
+            "description": "Forbidden: Requires ADMIN role."
+          },
+          "409": {
+            "description": "Email address already registered."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Provision new user account with elevated role (ADMIN, STAFF, WAREHOUSE_OPERATOR, CUSTOMER)",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful. Returns user profile, access token, and refresh token."
+          },
+          "401": {
+            "description": "Invalid email or password."
+          }
+        },
+        "summary": "Authenticate user credentials and issue dual JWT tokens",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens refreshed successfully."
+          },
+          "401": {
+            "description": "Invalid or expired refresh token."
+          }
+        },
+        "summary": "Exchange a valid refresh token for a new JWT access token",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "operationId": "AuthController_forgotPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset request processed successfully."
+          }
+        },
+        "summary": "Initiate password reset request and issue password reset token",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "AuthController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Profile retrieved successfully."
+          },
+          "401": {
+            "description": "Unauthorized or missing Bearer token."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get current authenticated user profile from JWT Bearer token",
+        "tags": [
+          "Authentication"
+        ]
+      },
+      "patch": {
+        "operationId": "AuthController_updateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated."
+          },
+          "409": {
+            "description": "Email address already in use."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update the authenticated user's own profile (name, email, phone)",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/change-password": {
+      "post": {
+        "operationId": "AuthController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed."
+          },
+          "400": {
+            "description": "New password matches the current password."
+          },
+          "401": {
+            "description": "Current password is incorrect."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Rotate the authenticated user's password after verifying the current one. Note: existing refresh tokens remain valid until they expire.",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "operationId": "UsersController_findAll",
+        "parameters": [
+          {
+            "name": "role",
+            "required": false,
+            "in": "query",
+            "description": "Filter by account role",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ADMIN",
+                "STAFF",
+                "CUSTOMER",
+                "WAREHOUSE_OPERATOR"
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search across name and email",
+            "schema": {
+              "example": "sarah",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number, 1-based",
+            "schema": {
+              "minimum": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Results per page (max 100)",
+            "schema": {
+              "minimum": 1,
+              "example": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Accounts retrieved (never includes password hashes)."
+          },
+          "403": {
+            "description": "Forbidden: requires STAFF or ADMIN role."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Paginated account directory with role filter, search and per-account activity aggregates",
+        "tags": [
+          "User Directory"
+        ]
+      }
+    },
+    "/api/v1/users/summary/roles": {
+      "get": {
+        "operationId": "UsersController_roleSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Role distribution."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Account counts grouped by role",
+        "tags": [
+          "User Directory"
+        ]
+      }
+    },
+    "/api/v1/users/{id}": {
+      "get": {
+        "operationId": "UsersController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account profile."
+          },
+          "404": {
+            "description": "User not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Full account profile with reservations and uploaded documents",
+        "tags": [
+          "User Directory"
+        ]
+      }
+    },
+    "/api/v1/products": {
+      "post": {
+        "operationId": "ProductsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Equipment item created successfully."
+          },
+          "403": {
+            "description": "Forbidden: Requires ADMIN or STAFF role."
+          },
+          "409": {
+            "description": "SKU code conflict."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Add new equipment item (ADMIN or STAFF only)",
+        "tags": [
+          "Equipment"
+        ]
+      },
+      "get": {
+        "operationId": "ProductsController_findAll",
+        "parameters": [
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Free-text search across equipment name and SKU",
+            "schema": {
+              "example": "drill",
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by category UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "categorySlug",
+            "required": false,
+            "in": "query",
+            "description": "Filter by category slug",
+            "schema": {
+              "example": "power-tools",
+              "type": "string"
+            }
+          },
+          {
+            "name": "minPrice",
+            "required": false,
+            "in": "query",
+            "description": "Minimum daily rental price",
+            "schema": {
+              "example": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "maxPrice",
+            "required": false,
+            "in": "query",
+            "description": "Maximum daily rental price",
+            "schema": {
+              "example": 300,
+              "type": "number"
+            }
+          },
+          {
+            "name": "availableOnly",
+            "required": false,
+            "in": "query",
+            "description": "Only return equipment with stock remaining",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Result ordering",
+            "schema": {
+              "example": "newest",
+              "type": "string",
+              "enum": [
+                "newest",
+                "price_asc",
+                "price_desc",
+                "name_asc"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number, 1-based",
+            "schema": {
+              "minimum": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Results per page (max 100)",
+            "schema": {
+              "minimum": 1,
+              "example": 12,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of equipment items retrieved."
+          }
+        },
+        "summary": "List equipment with search, category / price filtering, sorting and pagination",
+        "tags": [
+          "Equipment"
+        ]
+      }
+    },
+    "/api/v1/products/{id}": {
+      "get": {
+        "operationId": "ProductsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Equipment item details."
+          },
+          "404": {
+            "description": "Equipment item not found."
+          }
+        },
+        "summary": "Get details of a specific equipment item by ID",
+        "tags": [
+          "Equipment"
+        ]
+      },
+      "patch": {
+        "operationId": "ProductsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Equipment updated successfully."
+          },
+          "403": {
+            "description": "Forbidden: Requires ADMIN or STAFF role."
+          },
+          "404": {
+            "description": "Equipment not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update equipment details or stock level (ADMIN or STAFF only)",
+        "tags": [
+          "Equipment"
+        ]
+      },
+      "delete": {
+        "operationId": "ProductsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Equipment deleted successfully."
+          },
+          "403": {
+            "description": "Forbidden: Requires ADMIN role."
+          },
+          "404": {
+            "description": "Equipment not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete equipment item (ADMIN only)",
+        "tags": [
+          "Equipment"
+        ]
+      }
+    },
+    "/api/v1/categories": {
+      "get": {
+        "operationId": "CategoriesController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Categories retrieved."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all equipment categories with product counts",
+        "tags": [
+          "Equipment Categories"
+        ]
+      }
+    },
+    "/api/v1/categories/{id}": {
+      "get": {
+        "operationId": "CategoriesController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category details."
+          },
+          "404": {
+            "description": "Category not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get a single category by UUID",
+        "tags": [
+          "Equipment Categories"
+        ]
+      }
+    },
+    "/api/v1/uploads": {
+      "post": {
+        "operationId": "UploadsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file",
+                  "type"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "IDENTITY_DOCUMENT",
+                      "RENTAL_AGREEMENT",
+                      "EQUIPMENT_IMAGE"
+                    ]
+                  },
+                  "reservationId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Document stored and queued for review."
+          },
+          "400": {
+            "description": "Unsupported file type or file too large."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Upload an identity document, rental agreement or equipment image",
+        "tags": [
+          "Document Uploads"
+        ]
+      },
+      "get": {
+        "operationId": "UploadsController_findAll",
+        "parameters": [
+          {
+            "name": "reservationId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by reservation UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ownerId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by document owner (STAFF/ADMIN only)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by review status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING_REVIEW",
+                "VERIFIED",
+                "REJECTED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documents retrieved."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List documents (customers see only their own)",
+        "tags": [
+          "Document Uploads"
+        ]
+      }
+    },
+    "/api/v1/uploads/{id}/file": {
+      "get": {
+        "operationId": "UploadsController_download",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File stream."
+          },
+          "403": {
+            "description": "Not permitted to read this document."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Download the stored document binary",
+        "tags": [
+          "Document Uploads"
+        ]
+      }
+    },
+    "/api/v1/uploads/{id}/review": {
+      "patch": {
+        "operationId": "UploadsController_review",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewUploadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Review recorded."
+          },
+          "403": {
+            "description": "Forbidden: requires STAFF or ADMIN role."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Verify or reject an uploaded document",
+        "tags": [
+          "Document Uploads"
+        ]
+      }
+    },
+    "/api/v1/reservations": {
+      "post": {
+        "operationId": "ReservationsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReservationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reservation created successfully in PENDING state."
+          },
+          "400": {
+            "description": "Validation failure, date mismatch, or insufficient equipment stock."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a new equipment reservation request (CUSTOMER, STAFF, ADMIN)",
+        "tags": [
+          "Reservations"
+        ]
+      },
+      "get": {
+        "operationId": "ReservationsController_findAll",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by reservation status; omit for all statuses",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "ACTIVE",
+                "RETURNED",
+                "CANCELLED"
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search by reservation id or customer name/email",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number, 1-based",
+            "schema": {
+              "minimum": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Results per page (max 100)",
+            "schema": {
+              "minimum": 1,
+              "example": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated reservations with per-status counts."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List reservations with status filter and pagination (scoped to own rows for CUSTOMER; all for STAFF/ADMIN)",
+        "tags": [
+          "Reservations"
+        ]
+      }
+    },
+    "/api/v1/reservations/{id}": {
+      "get": {
+        "operationId": "ReservationsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reservation details with items and payment status."
+          },
+          "404": {
+            "description": "Reservation not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get details of a specific reservation by ID",
+        "tags": [
+          "Reservations"
+        ]
+      }
+    },
+    "/api/v1/reservations/{id}/status": {
+      "patch": {
+        "operationId": "ReservationsController_updateStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReservationStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reservation status updated successfully."
+          },
+          "400": {
+            "description": "Invalid state machine transition."
+          },
+          "403": {
+            "description": "Forbidden state transition for user role."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Execute state transition on reservation (APPROVED, REJECTED, ACTIVE, RETURNED, CANCELLED)",
+        "tags": [
+          "Reservations"
+        ]
+      }
+    },
+    "/api/v1/reservations/cron/process-notifications": {
+      "post": {
+        "operationId": "ReservationsController_processNotifications",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Background notification check completed successfully."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Trigger background scan for upcoming returns and expired reservations",
+        "tags": [
+          "Reservations"
+        ]
+      }
+    },
+    "/api/v1/notifications/test-email": {
+      "post": {
+        "operationId": "NotificationsController_sendEmail",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Email task accepted and enqueued."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Enqueue background email notification job onto BullMQ Redis queue",
+        "tags": [
+          "Notifications Queue"
+        ]
+      }
+    },
+    "/api/v1/notifications/test-push": {
+      "post": {
+        "operationId": "NotificationsController_sendPush",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendPushDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Push task accepted and enqueued."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Enqueue background mobile push notification job onto BullMQ Redis queue",
+        "tags": [
+          "Notifications Queue"
+        ]
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "operationId": "NotificationsController_findMine",
+        "parameters": [
+          {
+            "name": "unreadOnly",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notifications retrieved."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "The authenticated user's own notification feed with unread count",
+        "tags": [
+          "Notifications Queue"
+        ]
+      }
+    },
+    "/api/v1/notifications/{id}/read": {
+      "patch": {
+        "operationId": "NotificationsController_markRead",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Marked as read."
+          },
+          "404": {
+            "description": "Notification not found for this user."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Mark a single notification as read",
+        "tags": [
+          "Notifications Queue"
+        ]
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "patch": {
+        "operationId": "NotificationsController_markAllRead",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "All notifications marked as read."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Mark every unread notification as read",
+        "tags": [
+          "Notifications Queue"
+        ]
+      }
+    },
+    "/api/v1/inventory/logs": {
+      "post": {
+        "operationId": "InventoryController_createLog",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInventoryLogDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Inventory log recorded and stock level updated."
+          },
+          "400": {
+            "description": "Invalid stock deduction or payload error."
+          },
+          "403": {
+            "description": "Forbidden: Requires WAREHOUSE_OPERATOR, STAFF, or ADMIN role."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Record warehouse inventory action log (RECEIVE, RELEASE, DAMAGE_RECORDED, MAINTENANCE)",
+        "tags": [
+          "Inventory Logs"
+        ]
+      },
+      "get": {
+        "operationId": "InventoryController_findAll",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": false,
+            "in": "query",
+            "description": "Filter logs for a specific product UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of inventory action logs."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all inventory action logs with optional productId filter",
+        "tags": [
+          "Inventory Logs"
+        ]
+      }
+    },
+    "/api/v1/inventory/logs/product/{productId}": {
+      "get": {
+        "operationId": "InventoryController_findByProduct",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product inventory audit logs."
+          },
+          "404": {
+            "description": "Product not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get complete inventory audit history for a specific product",
+        "tags": [
+          "Inventory Logs"
+        ]
+      }
+    },
+    "/api/v1/payments/process": {
+      "post": {
+        "operationId": "PaymentsController_processPayment",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessPaymentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment processed successfully."
+          },
+          "400": {
+            "description": "Payment processing declined or parameter validation error."
+          },
+          "409": {
+            "description": "Reservation already paid."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Process mock payment for a reservation (CUSTOMER, STAFF, ADMIN)",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/payments": {
+      "get": {
+        "operationId": "PaymentsController_findAll",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by payment status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "PAID",
+                "FAILED",
+                "REFUNDED"
+              ]
+            }
+          },
+          {
+            "name": "reservationId",
+            "required": false,
+            "in": "query",
+            "description": "Filter to a single reservation UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number, 1-based",
+            "schema": {
+              "minimum": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Results per page (max 100)",
+            "schema": {
+              "minimum": 1,
+              "example": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payments retrieved with totals and status counts."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Paginated payment ledger with status filter (customers see only their own transactions)",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/payments/refund": {
+      "post": {
+        "operationId": "PaymentsController_refundPayment",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundPaymentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment refunded successfully."
+          },
+          "400": {
+            "description": "Payment cannot be refunded in current status."
+          },
+          "403": {
+            "description": "Forbidden: Requires STAFF or ADMIN role."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Initiate payment refund (STAFF or ADMIN only)",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/payments/reservation/{reservationId}": {
+      "get": {
+        "operationId": "PaymentsController_findByReservation",
+        "parameters": [
+          {
+            "name": "reservationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment records for reservation."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get payment records for a specific reservation",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/dashboard/stats": {
+      "get": {
+        "operationId": "DashboardController_getStats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Aggregated dashboard metrics."
+          },
+          "403": {
+            "description": "Forbidden: requires STAFF or ADMIN role."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Business-wide KPIs: revenue, utilisation, approvals queue, most-rented equipment and 14-day trends",
+        "tags": [
+          "Dashboard Analytics"
+        ]
+      }
+    },
+    "/api/v1/dashboard/my-summary": {
+      "get": {
+        "operationId": "DashboardController_getMySummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Personal rental summary."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Rental summary scoped to the authenticated user's own reservations",
+        "tags": [
+          "Dashboard Analytics"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "AmmuNation Enterprise ERP API",
+    "description": "Enterprise Resource Planning API documentation for AmmuNation backend services, including Authentication, RBAC, Equipment Management, Reservations, Payments, and Inventory Logs.",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "JWT-auth": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "name": "JWT",
+        "description": "Enter JWT Access Token",
+        "in": "header"
+      }
+    },
+    "schemas": {
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Unique user email address",
+            "example": "customer@ammunation.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "User password (minimum 6 characters)",
+            "example": "Password123!",
+            "minLength": 6
+          },
+          "name": {
+            "type": "string",
+            "description": "Full name of the user",
+            "example": "John Customer"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "name"
+        ]
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "User email address",
+            "example": "new.staff@ammunation.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "User password (minimum 6 characters)",
+            "example": "StaffPass123!",
+            "minLength": 6
+          },
+          "name": {
+            "type": "string",
+            "description": "Full name of the user",
+            "example": "Officer John"
+          },
+          "role": {
+            "type": "string",
+            "description": "Assigned system role",
+            "enum": [
+              "ADMIN",
+              "STAFF",
+              "CUSTOMER",
+              "WAREHOUSE_OPERATOR"
+            ],
+            "example": "STAFF"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "name",
+          "role"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Registered user email address",
+            "example": "alex.admin@ammunation.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "User account password",
+            "example": "Password123!"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "RefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "Valid long-lived JWT refresh token string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "ForgotPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "User email address for password reset request",
+            "example": "alex.customer@ammunation.com"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "UpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Display name",
+            "example": "John Customer"
+          },
+          "email": {
+            "type": "string",
+            "description": "Contact email address",
+            "example": "john@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Contact phone number",
+            "example": "+94 77 123 4567"
+          }
+        }
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "description": "The account's current password",
+            "example": "Password123!"
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "New password (minimum 8 characters)",
+            "example": "NewPassword456!",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      },
+      "CreateProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Equipment product name",
+            "example": "Tactical Recon Drone Mark IV"
+          },
+          "sku": {
+            "type": "string",
+            "description": "Unique Stock Keeping Unit (SKU) code",
+            "example": "EQUIP-DRONE-001"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed equipment specification or description",
+            "example": "Long-range surveillance drone with thermal imaging capacity."
+          },
+          "pricePerDay": {
+            "type": "number",
+            "description": "Daily rental price in USD",
+            "example": 150.5,
+            "minimum": 0
+          },
+          "totalStock": {
+            "type": "number",
+            "description": "Initial total stock inventory count available",
+            "example": 10,
+            "minimum": 0
+          },
+          "deposit": {
+            "type": "number",
+            "description": "Refundable security deposit held for the rental duration, in USD",
+            "example": 250,
+            "minimum": 0
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "UUID of the category this equipment belongs to",
+            "example": "a3f1c2d4-5678-4abc-9def-0123456789ab"
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "Public path to the equipment image",
+            "example": "/equipment/tl-drill-001.jpg"
+          },
+          "specifications": {
+            "type": "object",
+            "description": "Key/value technical specifications",
+            "example": {
+              "Motor": "10.0 Amp",
+              "Weight": "6.7 lbs"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "sku",
+          "pricePerDay",
+          "totalStock"
+        ]
+      },
+      "UpdateProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Equipment product name",
+            "example": "Tactical Recon Drone Mark IV"
+          },
+          "sku": {
+            "type": "string",
+            "description": "Unique Stock Keeping Unit (SKU) code",
+            "example": "EQUIP-DRONE-001"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed equipment specification or description",
+            "example": "Long-range surveillance drone with thermal imaging capacity."
+          },
+          "pricePerDay": {
+            "type": "number",
+            "description": "Daily rental price in USD",
+            "example": 150.5,
+            "minimum": 0
+          },
+          "totalStock": {
+            "type": "number",
+            "description": "Initial total stock inventory count available",
+            "example": 10,
+            "minimum": 0
+          },
+          "deposit": {
+            "type": "number",
+            "description": "Refundable security deposit held for the rental duration, in USD",
+            "example": 250,
+            "minimum": 0
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "UUID of the category this equipment belongs to",
+            "example": "a3f1c2d4-5678-4abc-9def-0123456789ab"
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "Public path to the equipment image",
+            "example": "/equipment/tl-drill-001.jpg"
+          },
+          "specifications": {
+            "type": "object",
+            "description": "Key/value technical specifications",
+            "example": {
+              "Motor": "10.0 Amp",
+              "Weight": "6.7 lbs"
+            }
+          }
+        }
+      },
+      "ReviewUploadDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_REVIEW",
+              "VERIFIED",
+              "REJECTED"
+            ],
+            "description": "Review outcome: VERIFIED or REJECTED"
+          },
+          "rejectionNote": {
+            "type": "string",
+            "description": "Explanation shown to the customer when rejecting"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "ReservationItemInputDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "description": "Product UUID to reserve",
+            "example": "64ecbab7-d40e-4225-9a2f-926f95e67c5f"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Quantity of equipment units requested",
+            "example": 2,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "productId",
+          "quantity"
+        ]
+      },
+      "CreateReservationDto": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "description": "Reservation start date (ISO 8601 string)",
+            "example": "2026-08-10T09:00:00.000Z"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Reservation end date (ISO 8601 string)",
+            "example": "2026-08-15T18:00:00.000Z"
+          },
+          "items": {
+            "description": "List of equipment items and quantities to reserve",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReservationItemInputDto"
+            }
+          }
+        },
+        "required": [
+          "startDate",
+          "endDate",
+          "items"
+        ]
+      },
+      "UpdateReservationStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Target state transition for the reservation",
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "ACTIVE",
+              "RETURNED",
+              "CANCELLED"
+            ],
+            "example": "APPROVED"
+          },
+          "rejectionReason": {
+            "type": "string",
+            "description": "Reason shown to the customer when a reservation is rejected",
+            "example": "Requested equipment is under maintenance for the selected dates.",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "SendEmailDto": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Recipient email address",
+            "example": "alex.customer@ammunation.com"
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject header",
+            "example": "AmmuNation Reservation Approved"
+          },
+          "body": {
+            "type": "string",
+            "description": "Email text or HTML body message",
+            "example": "Your equipment reservation #102 has been approved for pickup."
+          }
+        },
+        "required": [
+          "to",
+          "subject",
+          "body"
+        ]
+      },
+      "SendPushDto": {
+        "type": "object",
+        "properties": {
+          "deviceToken": {
+            "type": "string",
+            "description": "Target mobile device push token or topic",
+            "example": "device_fcm_token_9901823"
+          },
+          "title": {
+            "type": "string",
+            "description": "Push notification alert title",
+            "example": "Equipment Return Alert"
+          },
+          "message": {
+            "type": "string",
+            "description": "Push notification message text",
+            "example": "Tactical Recon Drone Mark IV is due for return by 6:00 PM today."
+          }
+        },
+        "required": [
+          "deviceToken",
+          "title",
+          "message"
+        ]
+      },
+      "CreateInventoryLogDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "description": "Target equipment product UUID",
+            "example": "64ecbab7-d40e-4225-9a2f-926f95e67c5f"
+          },
+          "action": {
+            "type": "string",
+            "description": "Inventory action type",
+            "enum": [
+              "RECEIVE",
+              "RELEASE",
+              "DAMAGE_RECORDED",
+              "MAINTENANCE"
+            ],
+            "example": "RECEIVE"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Quantity of equipment units affected",
+            "example": 5,
+            "minimum": 1
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional warehouse operator notes or inspection report details",
+            "example": "Received shipment batch #402 from manufacturer."
+          }
+        },
+        "required": [
+          "productId",
+          "action",
+          "quantity"
+        ]
+      },
+      "ProcessPaymentDto": {
+        "type": "object",
+        "properties": {
+          "reservationId": {
+            "type": "string",
+            "description": "Target reservation UUID to pay for",
+            "example": "64ecbab7-d40e-4225-9a2f-926f95e67c5f"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Payment transaction amount in USD",
+            "example": 903,
+            "minimum": 0.01
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Payment method string",
+            "example": "CREDIT_CARD",
+            "default": "CREDIT_CARD"
+          },
+          "simulateFailure": {
+            "type": "boolean",
+            "description": "Flag to simulate a gateway payment decline/failure during testing",
+            "example": false,
+            "default": false
+          }
+        },
+        "required": [
+          "reservationId",
+          "amount"
+        ]
+      },
+      "RefundPaymentDto": {
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "type": "string",
+            "description": "Target payment UUID to refund",
+            "example": "88ecbab7-d40e-4225-9a2f-926f95e67c5f"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Reason for processing refund",
+            "example": "Customer cancelled reservation prior to equipment checkout."
+          }
+        },
+        "required": [
+          "paymentId"
+        ]
+      }
+    }
+  }
+}
