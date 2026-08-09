@@ -8,16 +8,22 @@
 
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PaymentStatus } from '@prisma/client';
+import { PaymentStatus, Role } from '@prisma/client';
+import { ActivityService } from '../activity/activity.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PaymentGateway } from './gateway/payment.gateway';
 import { PaymentsService } from './payments.service';
 
 describe('PaymentsService', () => {
   let service: PaymentsService;
   let prismaService: any;
 
+  /** Staff actor — every service entry point now takes the caller for audit and ownership. */
+  const actor = { id: 'staff-uuid-1', role: Role.STAFF };
+
   const mockReservation = {
     id: 'res-uuid-100',
+    userId: 'customer-uuid-1',
     totalPrice: 500,
     payments: [],
   };
@@ -43,11 +49,41 @@ describe('PaymentsService', () => {
     },
   };
 
+  /**
+   * Stubbed gateway rather than the real MockStripeGateway: these tests are about the
+   * service's ledger handling, so the authorisation outcome has to be dictated, not
+   * inherited from another component's in-memory state.
+   */
+  const mockGateway = {
+    provider: 'mock_stripe',
+    createPaymentIntent: jest.fn().mockResolvedValue({
+      id: 'pi_test_1',
+      status: 'requires_confirmation',
+    }),
+    confirmPaymentIntent: jest.fn((id: string, opts?: { simulateFailure?: boolean }) =>
+      Promise.resolve(
+        opts?.simulateFailure
+          ? {
+              id,
+              status: 'requires_payment_method',
+              lastPaymentError: { message: 'Your card was declined.' },
+            }
+          : { id, status: 'succeeded' },
+      ),
+    ),
+    retrievePaymentIntent: jest.fn(),
+    refund: jest.fn().mockResolvedValue({ id: 're_test_1', status: 'succeeded' }),
+  };
+
+  const mockActivityService = { record: jest.fn(), findAll: jest.fn() };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentsService,
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: PaymentGateway, useValue: mockGateway },
+        { provide: ActivityService, useValue: mockActivityService },
       ],
     }).compile();
 
@@ -67,7 +103,7 @@ describe('PaymentsService', () => {
 
       const dto = { reservationId: 'invalid-res-id', amount: 500 };
 
-      await expect(service.processPayment(dto)).rejects.toThrow(NotFoundException);
+      await expect(service.processPayment(dto, actor)).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ConflictException if reservation is already paid', async () => {
@@ -78,7 +114,7 @@ describe('PaymentsService', () => {
 
       const dto = { reservationId: 'res-uuid-100', amount: 500 };
 
-      await expect(service.processPayment(dto)).rejects.toThrow(ConflictException);
+      await expect(service.processPayment(dto, actor)).rejects.toThrow(ConflictException);
     });
 
     it('should process payment successfully and return PAID status', async () => {
@@ -87,7 +123,7 @@ describe('PaymentsService', () => {
 
       const dto = { reservationId: 'res-uuid-100', amount: 500 };
 
-      const result = await service.processPayment(dto);
+      const result = await service.processPayment(dto, actor);
 
       expect(result).toHaveProperty('status', PaymentStatus.PAID);
       expect(result.message).toContain('successfully');
@@ -103,7 +139,7 @@ describe('PaymentsService', () => {
 
       const dto = { reservationId: 'res-uuid-100', amount: 500, simulateFailure: true };
 
-      await expect(service.processPayment(dto)).rejects.toThrow(BadRequestException);
+      await expect(service.processPayment(dto, actor)).rejects.toThrow(BadRequestException);
     });
   });
 

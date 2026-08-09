@@ -14,6 +14,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { ActivityService } from '../activity/activity.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from './auth.service';
 
@@ -49,6 +50,8 @@ describe('AuthService', () => {
         AuthService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: JwtService, useValue: mockJwtService },
+        // Audit sink. Every auth event writes one; nothing here asserts on it.
+        { provide: ActivityService, useValue: { record: jest.fn(), findAll: jest.fn() } },
       ],
     }).compile();
 

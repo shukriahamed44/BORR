@@ -13,6 +13,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReservationStatus, Role } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ActivityService } from '../activity/activity.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReservationsService } from './reservations.service';
 
@@ -76,6 +77,8 @@ describe('ReservationsService', () => {
         ReservationsService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: NotificationsService, useValue: mockNotificationsService },
+        // Audit sink. Every status transition writes one; nothing here asserts on it.
+        { provide: ActivityService, useValue: { record: jest.fn(), findAll: jest.fn() } },
       ],
     }).compile();
 

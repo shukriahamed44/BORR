@@ -9,6 +9,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { InventoryAction } from '@prisma/client';
+import { ActivityService } from '../activity/activity.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from './inventory.service';
 
@@ -52,6 +53,8 @@ describe('InventoryService', () => {
       providers: [
         InventoryService,
         { provide: PrismaService, useValue: mockPrismaService },
+        // Audit sink. Every stock movement writes one; nothing here asserts on it.
+        { provide: ActivityService, useValue: { record: jest.fn(), findAll: jest.fn() } },
       ],
     }).compile();
 
