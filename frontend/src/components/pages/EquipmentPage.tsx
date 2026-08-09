@@ -13,6 +13,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import './EquipmentPage.css';
+import { EmptyState, Pagination, SearchInput, Toasts } from '../ui';
 import type { Role } from '../../types/auth';
 import {
   productsApi,

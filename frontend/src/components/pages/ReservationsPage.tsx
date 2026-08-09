@@ -14,6 +14,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import './ReservationsPage.css';
+import { EmptyState, Pagination, SearchInput, TabBar, Toasts } from '../ui';
 import type { Role } from '../../types/auth';
 import {
   reservationsApi,
@@ -151,39 +152,26 @@ export const ReservationsPage: React.FC<ReservationsPageProps> = ({ currentRole 
 
   return (
     <div className="reservations-page animate-fade-in">
-      {msg && <div className="page-toast success">{msg}</div>}
-      {error && <div className="page-toast error">{error}</div>}
+      <Toasts message={msg} error={error} />
 
       {/* Status tabs */}
-      <div className="res-tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.value}
-            className={`res-tab ${tab === t.value ? 'active' : ''}`}
-            onClick={() => {
-              setTab(t.value);
-              setPage(1);
-            }}
-          >
-            {t.label}
-            <span className="res-tab-count">{totalForTab(t.value)}</span>
-          </button>
-        ))}
-      </div>
+      <TabBar
+        tabs={TABS}
+        active={tab}
+        onSelect={(value) => {
+          setTab(value);
+          setPage(1);
+        }}
+        count={totalForTab}
+      />
 
       {isStaff && (
-        <div className="res-search liquid-glass-search">
-          <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            className="header-search-input"
-            placeholder="Search by reservation id, customer name or email…"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-        </div>
+        <SearchInput
+          className="res-search"
+          value={searchInput}
+          onChange={setSearchInput}
+          placeholder="Search by reservation id, customer name or email…"
+        />
       )}
 
       <div className="results-meta">
@@ -191,7 +179,7 @@ export const ReservationsPage: React.FC<ReservationsPageProps> = ({ currentRole 
       </div>
 
       {!loading && reservations.length === 0 ? (
-        <div className="glass-panel dash-empty">No reservations in this view.</div>
+        <EmptyState panel>No reservations in this view.</EmptyState>
       ) : (
         <div className="res-list">
           {reservations.map((r) => {
@@ -258,27 +246,7 @@ export const ReservationsPage: React.FC<ReservationsPageProps> = ({ currentRole 
         </div>
       )}
 
-      {totalPages > 1 && (
-        <nav className="pagination">
-          <button
-            className="btn-small-glass"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            ← Prev
-          </button>
-          <span className="pagination-info">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            className="btn-small-glass"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          >
-            Next →
-          </button>
-        </nav>
-      )}
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
       {detail && (
         <ReservationDrawer

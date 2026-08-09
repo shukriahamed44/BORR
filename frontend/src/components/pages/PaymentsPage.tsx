@@ -12,6 +12,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import './PaymentsPage.css';
+import { EmptyState, Pagination, RefCode, TabBar, Toasts } from '../ui';
 import type { Role } from '../../types/auth';
 import {
   paymentsApi,
@@ -138,8 +139,7 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({ currentRole }) => {
 
   return (
     <div className="payments-page animate-fade-in">
-      {msg && <div className="page-toast success">{msg}</div>}
-      {error && <div className="page-toast error">{error}</div>}
+      <Toasts message={msg} error={error} />
 
       {/* Revenue summary */}
       <div className="pay-summary">
@@ -172,7 +172,7 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({ currentRole }) => {
             {unpaid.map((r) => (
               <li className="outstanding-row" key={r.id}>
                 <div className="outstanding-info">
-                  <span className="id-code">#{r.id.slice(0, 8).toUpperCase()}</span>
+                  <RefCode id={r.id} />
                   <span className="outstanding-dates">
                     {shortDate(r.startDate)} → {shortDate(r.endDate)}
                   </span>
@@ -191,28 +191,23 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({ currentRole }) => {
       )}
 
       {/* Ledger */}
-      <div className="pay-tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.value}
-            className={`res-tab ${tab === t.value ? 'active' : ''}`}
-            onClick={() => {
-              setTab(t.value);
-              setPage(1);
-            }}
-          >
-            {t.label}
-            <span className="res-tab-count">{tabCount(t.value)}</span>
-          </button>
-        ))}
-      </div>
+      <TabBar
+        className="pay-tabs"
+        tabs={TABS}
+        active={tab}
+        onSelect={(value) => {
+          setTab(value);
+          setPage(1);
+        }}
+        count={tabCount}
+      />
 
       <div className="results-meta">
         {loading ? 'Loading transactions…' : `${total} transaction${total === 1 ? '' : 's'}`}
       </div>
 
       {!loading && payments.length === 0 ? (
-        <div className="glass-panel dash-empty">No transactions in this view.</div>
+        <EmptyState panel>No transactions in this view.</EmptyState>
       ) : (
         <div className="glass-panel pay-panel">
           <div className="table-responsive">
@@ -239,7 +234,7 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({ currentRole }) => {
                     </td>
                     {isStaff && <td>{p.reservation?.user?.name ?? '—'}</td>}
                     <td>
-                      <span className="id-code">#{p.reservationId.slice(0, 8).toUpperCase()}</span>
+                      <RefCode id={p.reservationId} />
                     </td>
                     <td className="amount-cell">${money(p.amount)}</td>
                     <td className="date-cell">{dateTime(p.createdAt)}</td>
@@ -269,27 +264,7 @@ export const PaymentsPage: React.FC<PaymentsPageProps> = ({ currentRole }) => {
         </div>
       )}
 
-      {totalPages > 1 && (
-        <nav className="pagination">
-          <button
-            className="btn-small-glass"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            ← Prev
-          </button>
-          <span className="pagination-info">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            className="btn-small-glass"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          >
-            Next →
-          </button>
-        </nav>
-      )}
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
       {checkout && (
         <CheckoutModal

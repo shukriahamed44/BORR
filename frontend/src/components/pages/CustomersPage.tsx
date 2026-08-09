@@ -13,6 +13,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import './CustomersPage.css';
+import { EmptyState, Pagination, RefCode, SearchInput, TabBar, Toasts } from '../ui';
 import type { Role } from '../../types/auth';
 import {
   usersApi,
@@ -120,8 +121,7 @@ export const CustomersPage: React.FC<CustomersPageProps> = () => {
 
   return (
     <div className="customers-page animate-fade-in">
-      {msg && <div className="page-toast success">{msg}</div>}
-      {error && <div className="page-toast error">{error}</div>}
+      <Toasts message={msg} error={error} />
 
       <div className="cust-summary">
         <div className="cust-stat glass-panel">
@@ -140,41 +140,29 @@ export const CustomersPage: React.FC<CustomersPageProps> = () => {
         </div>
       </div>
 
-      <div className="res-tabs">
-        {ROLE_TABS.map((t) => (
-          <button
-            key={t.value}
-            className={`res-tab ${roleTab === t.value ? 'active' : ''}`}
-            onClick={() => {
-              setRoleTab(t.value);
-              setPage(1);
-            }}
-          >
-            {t.label}
-            <span className="res-tab-count">{tabCount(t.value)}</span>
-          </button>
-        ))}
-      </div>
+      <TabBar
+        tabs={ROLE_TABS}
+        active={roleTab}
+        onSelect={(value) => {
+          setRoleTab(value);
+          setPage(1);
+        }}
+        count={tabCount}
+      />
 
-      <div className="cust-search liquid-glass-search">
-        <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="11" cy="11" r="8" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <input
-          className="header-search-input"
-          placeholder="Search by name or email…"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-        />
-      </div>
+      <SearchInput
+        className="cust-search"
+        value={searchInput}
+        onChange={setSearchInput}
+        placeholder="Search by name or email…"
+      />
 
       <div className="results-meta">
         {loading ? 'Loading accounts…' : `${total} account${total === 1 ? '' : 's'}`}
       </div>
 
       {!loading && users.length === 0 ? (
-        <div className="glass-panel dash-empty">No accounts match this view.</div>
+        <EmptyState panel>No accounts match this view.</EmptyState>
       ) : (
         <div className="glass-panel cust-panel">
           <div className="table-responsive">
@@ -231,27 +219,7 @@ export const CustomersPage: React.FC<CustomersPageProps> = () => {
         </div>
       )}
 
-      {totalPages > 1 && (
-        <nav className="pagination">
-          <button
-            className="btn-small-glass"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            ← Prev
-          </button>
-          <span className="pagination-info">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            className="btn-small-glass"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          >
-            Next →
-          </button>
-        </nav>
-      )}
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
       {selectedId && (
         <CustomerDrawer
@@ -460,7 +428,7 @@ const CustomerDrawer: React.FC<{
                     {profile.reservations.map((r: any) => (
                       <li className="cust-res-row" key={r.id}>
                         <div className="cust-res-main">
-                          <span className="id-code">#{r.id.slice(0, 8).toUpperCase()}</span>
+                          <RefCode id={r.id} />
                           <span className={`status-pill status-${r.status.toLowerCase()}`}>
                             {r.status}
                           </span>
