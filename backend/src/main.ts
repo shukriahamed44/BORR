@@ -77,7 +77,9 @@ async function bootstrap() {
   }
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  // Bind every interface: a bare `listen(port)` resolves to the IPv6 loopback only,
+  // which a phone or a container on the LAN cannot reach.
+  await app.listen(port, '0.0.0.0');
   logger.log(`AmmuNation Backend running on http://localhost:${port}/api/v1`);
   logger.log(`Swagger OpenAPI Documentation available at http://localhost:${port}/api/docs`);
 }
