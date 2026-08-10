@@ -110,6 +110,7 @@
 }
 
 html {
+  scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -523,6 +524,26 @@ select {
   color: var(--borr-blue);
 }
 
+/* Native select dressed as the existing field text — no custom dropdown widget. */
+.field-select {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  outline: none;
+  padding: 0;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.field-select option {
+  color: var(--gray-700);
+  background: var(--white);
+}
+
 .search-divider {
   width: 1px;
   height: 36px;
@@ -765,6 +786,7 @@ select {
   margin-bottom: 170px;
   position: relative;
   z-index: 20;
+  scroll-margin-top: 40px;
 }
 
 .search-bar-container .search-bar {
@@ -854,6 +876,13 @@ select {
 
 .carousel-track::-webkit-scrollbar {
   display: none;
+}
+
+.carousel-empty {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--gray-500);
+  padding: 40px 4px;
 }
 
 .category-card {
