@@ -31,6 +31,11 @@ export function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
 
+  // Landing search bar filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchCategory, setSearchCategory] = useState('');
+  const [searchLocation, setSearchLocation] = useState('');
+
   // Rehydrate the session from a persisted JWT on mount. A rejected or expired token
   // is discarded rather than left to fail every subsequent request.
   useEffect(() => {
@@ -164,6 +169,18 @@ export function App() {
     },
   ];
 
+  // "More" is a call-to-action tile, not a real category, so it stays out of the filter options.
+  const selectableCategories = categoryItems
+    .filter((item) => item.title !== 'More')
+    .map((item) => item.title);
+
+  const query = searchQuery.trim().toLowerCase();
+  const visibleCategories = categoryItems.filter(
+    (item) =>
+      (!searchCategory || item.title === searchCategory) &&
+      (!query || item.title.toLowerCase().includes(query)),
+  );
+
   return (
     <div className="landing-page">
       {/* ── Page 1: Hero Section ───────────────────────────────────── */}
@@ -208,7 +225,7 @@ export function App() {
             <span className="hero-line"><span className="text-white">BIG </span><span className="text-navy">OWN</span></span>
             <span className="hero-line"><span className="text-navy">SMALL</span></span>
           </h1>
-          <a href="#categories" className="btn-book-now">
+          <a href="#search" className="btn-book-now">
             <span>BOOK NOW</span>
             <span className="btn-arrow">→</span>
           </a>
@@ -218,7 +235,7 @@ export function App() {
       {/* ── Page 2: Categories Section ─────────────────────────────── */}
       <section className="categories-section" id="categories">
         {/* Floating Liquid Glass Search Bar */}
-        <div className="search-bar-container">
+        <div className="search-bar-container" id="search">
           <div className="search-bar liquid-glass">
             {/* Search Input */}
             <div className="search-field search-input-field">
@@ -226,37 +243,67 @@ export function App() {
                 <circle cx="8.5" cy="8.5" r="6" />
                 <path d="M13 13l5 5" strokeLinecap="round" />
               </svg>
-              <input type="text" placeholder="Search equipment..." />
+              <input
+                type="text"
+                placeholder="Search equipment..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
 
             <div className="search-divider" />
 
             {/* Category Filter */}
-            <div className="search-field">
+            <label className="search-field">
               <span className="field-label">Category</span>
               <div className="field-value">
-                <span>All Categories</span>
+                {/* ponytail: native <select>, no custom dropdown widget */}
+                <select
+                  className="field-select"
+                  value={searchCategory}
+                  onChange={(e) => setSearchCategory(e.target.value)}
+                >
+                  <option value="">All Categories</option>
+                  {selectableCategories.map((title) => (
+                    <option key={title} value={title}>{title}</option>
+                  ))}
+                </select>
                 <svg className="chevron-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M3 4.5L6 7.5L9 4.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-            </div>
+            </label>
 
             <div className="search-divider" />
 
             {/* Location Filter */}
-            <div className="search-field">
+            <label className="search-field">
               <span className="field-label">Location</span>
               <div className="field-value">
-                <span>Select Location</span>
+                <select
+                  className="field-select"
+                  value={searchLocation}
+                  onChange={(e) => setSearchLocation(e.target.value)}
+                >
+                  <option value="">Select Location</option>
+                  <option value="Colombo">Colombo, Sri Lanka</option>
+                </select>
                 <svg className="location-icon" viewBox="0 0 16 16" fill="currentColor">
                   <path d="M8 0C4.7 0 2 2.7 2 6c0 4.5 6 10 6 10s6-5.5 6-10c0-3.3-2.7-6-6-6zm0 8.5c-1.4 0-2.5-1.1-2.5-2.5S6.6 3.5 8 3.5s2.5 1.1 2.5 2.5S9.4 8.5 8 8.5z" />
                 </svg>
               </div>
-            </div>
+            </label>
 
             {/* Find Equipment Button */}
-            <button className="btn-find">Find Equipment&nbsp;&nbsp;→</button>
+            <button
+              className="btn-find"
+              onClick={() => {
+                setAuthMode('signin');
+                setAuthModalOpen(true);
+              }}
+            >
+              Find Equipment&nbsp;&nbsp;→
+            </button>
           </div>
         </div>
 
@@ -281,7 +328,7 @@ export function App() {
           <div className="categories-right">
             <div className="carousel-wrapper">
               <div className="carousel-track" ref={carouselRef}>
-                {categoryItems.map((item) => (
+                {visibleCategories.map((item) => (
                   <div key={item.id} className="category-card">
                     <div className="category-card-img-placeholder">
                       {item.icon}
@@ -290,6 +337,9 @@ export function App() {
                     <p className="category-card-count">{item.count}</p>
                   </div>
                 ))}
+                {visibleCategories.length === 0 && (
+                  <p className="carousel-empty">No categories match “{searchQuery}”.</p>
+                )}
               </div>
 
               {/* Carousel Navigation Arrow Button */}

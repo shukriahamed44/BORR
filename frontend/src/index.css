@@ -761,8 +761,8 @@ select {
 .search-bar-container {
   display: flex;
   justify-content: center;
-  margin-top: -25px;
-  margin-bottom: 70px;
+  margin-top: 25px;
+  margin-bottom: 170px;
   position: relative;
   z-index: 20;
 }
@@ -2938,6 +2938,7 @@ select {
     z-index: 95;
   }
 }
+
 /* ════════════════════════════════════════════════════════════════════════
    DARK MODE — Apple-style dark liquid glass
    Toggled from the header profile menu; sets data-theme="dark" on <html>.
