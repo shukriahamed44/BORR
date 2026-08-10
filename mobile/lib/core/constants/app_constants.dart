@@ -20,7 +20,15 @@ class AppConstants {
 
   static String get apiBaseUrl {
     if (_override.isNotEmpty) return _override;
-    return kIsWeb ? 'http://localhost:3000/api/v1' : 'http://10.0.2.2:3000/api/v1';
+    // 10.0.2.2 is the Android *emulator's* alias for the host loopback. It means
+    // nothing on a physical phone, and nothing on web/desktop/iOS-sim either,
+    // where the host is plain localhost. A real device needs the dart-define.
+    final onAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    // 127.0.0.1 rather than localhost: under WSL the API is relayed to the IPv4
+    // loopback only, and `localhost` resolves to [::1] first.
+    return onAndroid
+        ? 'http://10.0.2.2:3000/api/v1'
+        : 'http://127.0.0.1:3000/api/v1';
   }
 
   // ─── Secure Storage Keys ─────────────────────────────────────────────────
