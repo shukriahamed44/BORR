@@ -45,25 +45,28 @@ class SecureStorageService {
 
   // ─── Read ─────────────────────────────────────────────────────────────────
 
-  static Future<String?> getAccessToken() async {
-    return _storage.read(key: AppConstants.keyAccessToken);
+  /// ponytail: on web the vault is AES-GCM in localStorage — a key/ciphertext
+  /// mismatch throws `OperationError` and poisons every request. Wipe and treat
+  /// as logged out instead of letting it escape into the Dio interceptor.
+  static Future<String?> _read(String key) async {
+    try {
+      return await _storage.read(key: key);
+    } catch (_) {
+      await clearAll();
+      return null;
+    }
   }
 
-  static Future<String?> getRefreshToken() async {
-    return _storage.read(key: AppConstants.keyRefreshToken);
-  }
+  static Future<String?> getAccessToken() => _read(AppConstants.keyAccessToken);
 
-  static Future<String?> getUserRole() async {
-    return _storage.read(key: AppConstants.keyUserRole);
-  }
+  static Future<String?> getRefreshToken() =>
+      _read(AppConstants.keyRefreshToken);
 
-  static Future<String?> getUserName() async {
-    return _storage.read(key: AppConstants.keyUserName);
-  }
+  static Future<String?> getUserRole() => _read(AppConstants.keyUserRole);
 
-  static Future<String?> getUserId() async {
-    return _storage.read(key: AppConstants.keyUserId);
-  }
+  static Future<String?> getUserName() => _read(AppConstants.keyUserName);
+
+  static Future<String?> getUserId() => _read(AppConstants.keyUserId);
 
   static Future<bool> isLoggedIn() async {
     final token = await getAccessToken();
