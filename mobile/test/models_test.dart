@@ -155,4 +155,20 @@ void main() {
       expect(n.type, isEmpty);
     });
   });
+
+  group('Asset URLs', () {
+    test('a relative backend path becomes an absolute URL off the API origin', () {
+      final origin = Uri.parse(AppConstants.apiBaseUrl).origin;
+      expect(AppConstants.assetUrl('/equipment/tl-drill-001.jpg'),
+          '$origin/equipment/tl-drill-001.jpg');
+      // No /api/v1 — static files sit at the server root.
+      expect(AppConstants.assetUrl('/equipment/x.jpg'), isNot(contains('/api/v1')));
+    });
+
+    test('absent and already-absolute paths pass through', () {
+      expect(AppConstants.assetUrl(null), isNull);
+      expect(AppConstants.assetUrl(''), isNull);
+      expect(AppConstants.assetUrl('https://cdn.test/a.jpg'), 'https://cdn.test/a.jpg');
+    });
+  });
 }

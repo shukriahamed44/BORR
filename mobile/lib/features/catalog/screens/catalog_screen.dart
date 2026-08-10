@@ -333,24 +333,13 @@ class _ProductCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ponytail: backend imageUrl is a relative path with no host serving it,
-          // so equipment renders as a tinted glyph until real image hosting exists.
           Expanded(
-            child: Container(
+            child: SizedBox(
               width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFEFF4FF), Color(0xFFE3ECFB)],
-                ),
-              ),
               child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  Center(
-                    child: Icon(Icons.handyman_rounded,
-                        size: 44, color: AppTheme.primary.withOpacity(0.55)),
-                  ),
+                  ProductImage(imageUrl: product.imageUrl),
                   Positioned(
                     top: 10,
                     left: 10,

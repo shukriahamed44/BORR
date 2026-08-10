@@ -11,6 +11,7 @@
 
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger';
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
@@ -19,7 +20,11 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Equipment photos live in backend/public/equipment/<sku>.jpg and are served at
+  // /equipment/<sku>.jpg — outside the API prefix, so web and mobile share one copy.
+  app.useStaticAssets(join(process.cwd(), 'public'), { maxAge: '7d' });
 
   // Global Route Prefix
   app.setGlobalPrefix('api/v1');

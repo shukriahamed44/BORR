@@ -31,6 +31,15 @@ class AppConstants {
         : 'http://127.0.0.1:3000/api/v1';
   }
 
+  /// Absolute URL for a backend asset path like `/equipment/tl-drill-001.jpg`.
+  /// Static files sit at the server root, outside the `/api/v1` prefix.
+  static String? assetUrl(String? path) {
+    if (path == null || path.isEmpty) return null;
+    if (path.startsWith('http')) return path;
+    final origin = Uri.parse(apiBaseUrl).origin;
+    return '$origin${path.startsWith('/') ? '' : '/'}$path';
+  }
+
   // ─── Secure Storage Keys ─────────────────────────────────────────────────
   static const String keyAccessToken = 'ammunation_access_token';
   static const String keyRefreshToken = 'ammunation_refresh_token';

@@ -14,6 +14,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
 
 /// A frosted panel: blurs whatever sits behind it, then lays a translucent
@@ -298,6 +299,46 @@ class SectionHeader extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Equipment photo on the tinted gradient the app used before images existed.
+/// Falls back to that same gradient + glyph while loading, on a missing
+/// `imageUrl`, or when the file is not on the server.
+class ProductImage extends StatelessWidget {
+  final String? imageUrl;
+  final double glyphSize;
+
+  const ProductImage({super.key, required this.imageUrl, this.glyphSize = 44});
+
+  @override
+  Widget build(BuildContext context) {
+    final url = AppConstants.assetUrl(imageUrl);
+    final placeholder = DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFEFF4FF), Color(0xFFE3ECFB)],
+        ),
+      ),
+      child: Center(
+        child: Icon(Icons.handyman_rounded,
+            size: glyphSize, color: AppTheme.primary.withOpacity(0.55)),
+      ),
+    );
+
+    if (url == null) return SizedBox.expand(child: placeholder);
+
+    return SizedBox.expand(
+      child: Image.network(
+        url,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => placeholder,
+        loadingBuilder: (_, child, progress) =>
+            progress == null ? child : placeholder,
+      ),
     );
   }
 }

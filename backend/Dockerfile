@@ -20,6 +20,8 @@ COPY package*.json prisma.config.ts ./
 COPY prisma ./prisma
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+# Equipment photos are served statically from ./public — see main.ts.
+COPY public ./public
 
 # Uploads live on a mounted volume, not in the image — see docker-compose.prod.yml.
 ENV UPLOAD_DIR=/data/uploads

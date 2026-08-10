@@ -113,22 +113,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ),
           flexibleSpace: FlexibleSpaceBar(
-            background: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFFEFF4FF), Color(0xFFE0E9F8)],
-                ),
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.handyman_rounded,
-                  size: 108,
-                  color: AppTheme.primary.withOpacity(0.5),
-                ),
-              ),
-            ),
+            background: ProductImage(imageUrl: p.imageUrl, glyphSize: 108),
           ),
         ),
 
