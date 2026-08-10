@@ -2,3 +2,8 @@
 # Anchored with a leading slash: the unanchored form also matched src/uploads/ and kept
 # the entire uploads source module out of git, so a fresh clone would not compile.
 /uploads/
+
+# Real secrets never enter version control. Commit .env.example instead, which carries
+# the same keys with placeholder values.
+.env
+!.env.example

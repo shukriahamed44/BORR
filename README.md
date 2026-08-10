@@ -45,10 +45,10 @@ project AmmuNation/
 │   │   ├── notifications/    ← BullMQ queue, worker, durable in-app feed
 │   │   ├── activity/         ← Global audit trail (ActivityLog)
 │   │   └── prisma/           ← Database service & ORM connection
+│   ├── public/equipment/     ← Equipment images, named <sku-lowercase>.jpg
 │   └── postman_collection.json ← Master Postman Collection
 │
 ├── frontend/                 ← ✅ ACTIVE WEB APP — Vite + React 19 (Port 5173)
-│   ├── public/equipment/     ← Equipment images, named <sku-lowercase>.jpg
 │   └── src/
 │       ├── components/layout/  ← AppShell, role-based Sidebar, Header
 │       ├── components/pages/   ← Equipment, Reservations, Inventory,
@@ -98,9 +98,13 @@ project AmmuNation/
 - **Bcrypt Hashing**: Password security with salt rounds = 10.
 
 ### 2. 🎒 Equipment & Catalog Module
-- Equipment listing with pagination, search, and category filtering.
-- Daily rates, stock availability tracking, and technical specifications.
-- **QR Code Generation**: Encodes unique product IDs for instant barcode scanning.
+- Equipment listing with **offset pagination**, full-text search (name / SKU / description),
+  category filtering by id or slug, price-range narrowing, in-stock filtering and four sort orders.
+- Daily rate, refundable deposit, stock availability and key/value technical specifications per item.
+- Images served by the backend from `backend/public/equipment/<sku>.jpg` at `/equipment/<sku>.jpg`
+  (one copy for web and mobile), with a labelled placeholder when a file is absent.
+- QR generation and barcode scanning are implemented in the **Flutter app** (`qr_flutter`,
+  `mobile_scanner`) — they are not part of the backend or web catalog.
 
 ### 3. 📋 Reservation Booking Engine
 - Date range selection with automatic duration and total cost computation.
@@ -158,10 +162,13 @@ project AmmuNation/
 
 | Role | Email | Password | Permissions |
 |---|---|---|---|
-| 👑 **Admin** | `admin@ammunation.com` | `Password123!` | Full Admin Dashboard, Approval Workflows, Inventory Logs, QR Scanner |
-| 🛡️ **Staff** | `staff@ammunation.com` | `Password123!` | Reservation Approvals, Equipment CRUD, Inventory Logs |
-| 📦 **Warehouse Operator** | `warehouse@ammunation.com` | `Password123!` | Receive/Release Equipment, Damages & Maintenance Logs |
-| 👤 **Customer** | `customer@ammunation.com` | `Password123!` | Equipment Catalog, Booking Engine, My Reservations |
+| 👑 **Admin** | `admin@ammunation.com` | `Password123!` | Everything: dashboard KPIs, equipment CRUD **incl. delete**, approvals, inventory, customer directory, refunds, audit log |
+| 🛡️ **Staff** | `staff@ammunation.com` | `Password123!` | Approvals, equipment create/edit (no delete), inventory, customer directory & document verification, refunds |
+| 📦 **Warehouse Operator** | `warehouse@ammunation.com` | `Password123!` | Receive / release / damage / maintenance stock movements. Cannot create catalog entries or approve reservations |
+| 👤 **Customer** | `customer@ammunation.com` | `Password123!` | Browse & book equipment, cancel own pending booking, upload documents, pay and view own receipts |
+
+> Roles are enforced by API guards, not just hidden in the UI — e.g. a customer calling
+> `/users` or `/activity` receives `403`. QR scanning is a **Flutter-only** feature.
 
 *Note: You can also create any new account on the Register screen on both Web & Mobile.*
 

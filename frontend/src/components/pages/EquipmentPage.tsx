@@ -43,7 +43,8 @@ const plusDaysISO = (days: number) =>
   new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
 /**
- * Equipment photo with a graceful fallback. Images live in /public/equipment/<sku>.jpg;
+ * Equipment photo with a graceful fallback. Images live in backend/public/equipment/<sku>.jpg
+ * and are served at /equipment/<sku>.jpg (Vite proxies the path in dev, nginx in prod);
  * until a file is supplied the tile shows a labelled placeholder rather than a broken image.
  */
 const EquipmentImage: React.FC<{ product: Product; className?: string }> = ({

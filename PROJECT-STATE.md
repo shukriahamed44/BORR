@@ -154,9 +154,9 @@ Plus, completed before the checklist existed: **App Shell**, **Dashboard**, **Eq
 Resolved in Phase 7: `ActivityLog` is now written on every significant action, the notification
 bell reads the real `Notification` table, and `README.md` / `erp_diagram.md` / the Postman
 collection have been corrected to match the implementation.
-- Equipment images: `Product.imageUrl` points at `/equipment/<sku-lowercase>.jpg` in
-  `frontend/public/equipment/`. **The user will supply images later**; until then cards render a
-  placeholder labelled with the SKU. Full SKU→filename table is in `RUNBOOK.md` §7.
+- Equipment images: **supplied and wired.** All 16 files sit in `backend/public/equipment/`,
+  served statically at `/equipment/<sku-lowercase>.jpg` (matching `Product.imageUrl`) and reached
+  by web via proxy and by mobile via the API origin. Full SKU→filename table is in `RUNBOOK.md` §7.
 - Flutter app (`mobile/`) and `web/` (Next.js) have not been touched this session.
 - No unit/integration tests written this session (`.spec.ts` files exist from before).
 

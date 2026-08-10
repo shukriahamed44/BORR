@@ -285,11 +285,18 @@ Warehouse operators **restock existing** equipment (RECEIVE increments `Product.
 
 ## 7. Equipment images
 
-Images are served from `frontend/public/equipment/` and referenced by `Product.imageUrl`.
-Convention: **`/equipment/<sku-lowercase>.jpg`**. Drop a correctly-named file in and it renders with
-zero code changes; until then the card shows a labelled placeholder (no broken-image icon).
+Files live in `backend/public/equipment/` and are served statically by the API at
+**`/equipment/<sku-lowercase>.jpg`** — the server root, outside the `/api/v1` prefix — which is
+exactly what `Product.imageUrl` holds. One copy feeds every client:
 
-Expected filenames:
+- **Web (dev)**: Vite proxies `/equipment` to the backend (`frontend/vite.config.ts`).
+- **Web (prod)**: nginx proxies `^/(api|equipment)/` to the backend container.
+- **Mobile**: `AppConstants.assetUrl()` resolves the path against the API origin.
+
+Drop a correctly-named file in and it renders with zero code changes; when one is missing the web
+card shows a labelled placeholder and the app shows its gradient glyph (no broken-image icon).
+
+All 16 are present. Filenames:
 
 | SKU | File | Equipment |
 |---|---|---|

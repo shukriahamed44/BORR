@@ -26,8 +26,8 @@ const CATEGORIES = [
 ];
 
 /**
- * Catalog rows keyed by SKU. `imageUrl` points at /public/equipment/<sku>.jpg in the
- * frontend — drop a file with the matching name and it renders with no code change.
+ * Catalog rows keyed by SKU. `imageUrl` points at backend/public/equipment/<sku>.jpg, which
+ * main.ts serves at /equipment/<sku>.jpg — drop a matching file in and it renders, no code change.
  */
 const PRODUCTS: {
   sku: string;
