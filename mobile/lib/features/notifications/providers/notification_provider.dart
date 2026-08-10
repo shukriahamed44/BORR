@@ -1,18 +1,17 @@
 /**
  * FORMAL ARCHITECTURAL DESCRIPTION:
- * Reservation Notification Provider (`notification_provider.dart`).
- * Polls GET /reservations, diffs each reservation's status against the last
- * status seen on this device (persisted in SharedPreferences) and raises a real
- * local push notification whenever the backend moved a reservation — approved,
- * rejected, expired — or a return falls due within 24 hours.
+ * Notification Provider (`notification_provider.dart`).
+ * Reads the authenticated user's durable notification feed from
+ * `GET /notifications`, exposes it with an unread tally, raises an OS-level local
+ * notification for every row this device has not shown before, and writes read
+ * state back through `PATCH /notifications/:id/read` and `/notifications/read-all`.
  *
  * IN SIMPLE WORDS:
- * Watches your reservations in the background and pings you when staff approves,
- * rejects, or when equipment is due back — no Firebase, no server push needed.
+ * Fetches your notifications from the server, pings your phone when a new one
+ * arrives, and keeps "read"/"unread" in sync with the backend.
  */
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -22,21 +21,19 @@ import '../../../core/services/api_service.dart';
 import '../../../shared/models/models.dart';
 
 class NotificationProvider extends ChangeNotifier {
-  static const _prefsStatuses = 'ammunation_seen_statuses';
-  static const _prefsFired = 'ammunation_fired_alerts';
+  /// Notification ids this device has already raised a banner for. Without it,
+  /// every poll would re-notify the whole feed.
+  static const _prefsAlerted = 'ammunation_alerted_ids';
 
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
-  final List<NotificationModel> _notifications = [];
+
+  List<NotificationModel> _notifications = [];
   int _unreadCount = 0;
-
-  /// reservationId → last status this device has already told the user about.
-  Map<String, String> _seenStatuses = {};
-
-  /// One-shot alert keys (e.g. "<id>:upcoming") so reminders fire only once.
-  Set<String> _firedAlerts = {};
+  Set<String> _alertedIds = {};
 
   Timer? _poller;
   bool _syncing = false;
+  bool _ready = false;
 
   List<NotificationModel> get notifications => List.unmodifiable(_notifications);
   int get unreadCount => _unreadCount;
@@ -64,20 +61,17 @@ class NotificationProvider extends ChangeNotifier {
     );
 
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_prefsStatuses);
-    if (raw != null) {
-      _seenStatuses = (jsonDecode(raw) as Map).map((k, v) => MapEntry(k.toString(), v.toString()));
-    }
-    _firedAlerts = (prefs.getStringList(_prefsFired) ?? []).toSet();
+    _alertedIds = (prefs.getStringList(_prefsAlerted) ?? []).toSet();
+    _ready = true;
   }
 
   /// Starts polling once a user is logged in. Safe to call more than once.
   void startPolling() {
     if (_poller != null) return;
     syncFromServer();
-    // ponytail: 60s poll instead of FCM/websockets — the backend has no push
-    // channel, and this keeps the whole feature client-side. Swap for FCM if
-    // instant delivery while backgrounded ever matters.
+    // ponytail: 60s poll instead of FCM. The backend persists the feed but has no
+    // push channel, so this is the whole delivery mechanism. Swap for FCM if
+    // alerts need to arrive while the app is backgrounded or killed.
     _poller = Timer.periodic(const Duration(seconds: 60), (_) => syncFromServer());
   }
 
@@ -86,36 +80,37 @@ class NotificationProvider extends ChangeNotifier {
     _poller = null;
   }
 
-  /// Pulls reservations and raises a notification for anything that changed.
+  /// Pulls the feed and raises a banner for every row not seen on this device.
   Future<void> syncFromServer() async {
     if (_syncing) return;
     _syncing = true;
     try {
-      final res = await apiService.get('/reservations');
-      final reservations = ((res.data['reservations'] ?? []) as List)
-          .map((e) => ReservationModel.fromJson(e as Map<String, dynamic>))
+      final res = await apiService.get('/notifications', params: {'limit': 50});
+      final data = res.data as Map<String, dynamic>;
+
+      final incoming = ((data['notifications'] ?? []) as List)
+          .map((e) => NotificationModel.fromJson(e as Map<String, dynamic>))
           .toList();
 
-      final firstRun = _seenStatuses.isEmpty;
+      // The very first sync on a device records the baseline instead of firing a
+      // banner per historical row.
+      final firstRun = _alertedIds.isEmpty && _notifications.isEmpty;
 
-      for (final r in reservations) {
-        final previous = _seenStatuses[r.id];
-        _seenStatuses[r.id] = r.status;
-
-        // First sync on a device just records the baseline — no notification storm.
-        if (firstRun || previous == null || previous == r.status) {
-          _checkUpcomingReturn(r);
-          continue;
+      for (final n in incoming) {
+        if (_alertedIds.contains(n.id)) continue;
+        _alertedIds.add(n.id);
+        // Already-read rows are history, never worth a banner.
+        if (!firstRun && !n.isRead) {
+          await _raiseBanner(n.title, n.body);
         }
-
-        final message = _messageFor(r);
-        if (message != null) {
-          await sendNotification(title: message.$1, body: message.$2);
-        }
-        _checkUpcomingReturn(r);
       }
 
-      await _persist();
+      _notifications = incoming;
+      _unreadCount = (data['unreadCount'] as num?)?.toInt() ??
+          incoming.where((n) => !n.isRead).length;
+
+      await _persistAlerted();
+      notifyListeners();
     } catch (_) {
       // Offline or logged out — try again on the next tick.
     } finally {
@@ -123,63 +118,69 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
-  /// Spec notification types driven by a status transition.
-  (String, String)? _messageFor(ReservationModel r) {
-    final ref = 'RES-${r.id.substring(0, 8).toUpperCase()}';
-    switch (r.status) {
-      case 'APPROVED':
-        return ('Reservation Approved', 'Your reservation $ref has been approved. Equipment is reserved for you.');
-      case 'REJECTED':
-        return ('Reservation Rejected', 'Your reservation $ref was rejected. Contact support for details.');
-      case 'CANCELLED':
-        return ('Reservation Expired', 'Reservation $ref is no longer active — it was cancelled or expired.');
-      case 'ACTIVE':
-        return ('Equipment Checked Out', 'Equipment for $ref is now in your possession.');
-      case 'RETURNED':
-        return ('Return Completed', 'Equipment for $ref has been checked back in. Thank you.');
-      default:
-        return null;
+  /// Marks one notification read on the server, updating the UI immediately.
+  Future<void> markRead(String id) async {
+    final i = _notifications.indexWhere((n) => n.id == id);
+    if (i == -1 || _notifications[i].isRead) return;
+
+    _notifications[i] = _copyRead(_notifications[i]);
+    if (_unreadCount > 0) _unreadCount--;
+    notifyListeners();
+
+    try {
+      await apiService.patch('/notifications/$id/read');
+    } catch (_) {
+      // The next sync re-reads server truth, so a failed write self-heals.
     }
   }
 
-  /// "Upcoming Return" reminder — fires once per reservation, 24h before due.
-  void _checkUpcomingReturn(ReservationModel r) {
-    if (r.status != 'ACTIVE') return;
-    final hoursLeft = r.endDate.difference(DateTime.now()).inHours;
-    if (hoursLeft < 0 || hoursLeft > 24) return;
+  Future<void> markAllRead() async {
+    if (_unreadCount == 0) return;
 
-    final key = '${r.id}:upcoming';
-    if (_firedAlerts.contains(key)) return;
-    _firedAlerts.add(key);
+    _notifications = _notifications.map(_copyRead).toList();
+    _unreadCount = 0;
+    notifyListeners();
 
-    final ref = 'RES-${r.id.substring(0, 8).toUpperCase()}';
-    sendNotification(
-      title: 'Upcoming Return',
-      body: 'Equipment for $ref is due back within 24 hours.',
-    );
+    try {
+      await apiService.patch('/notifications/read-all');
+    } catch (_) {
+      // Same self-healing as markRead.
+    }
   }
 
-  Future<void> _persist() async {
+  NotificationModel _copyRead(NotificationModel n) => NotificationModel(
+        id: n.id,
+        title: n.title,
+        body: n.body,
+        receivedAt: n.receivedAt,
+        isRead: true,
+        type: n.type,
+        entityId: n.entityId,
+      );
+
+  Future<void> _persistAlerted() async {
+    if (!_ready) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsStatuses, jsonEncode(_seenStatuses));
-    await prefs.setStringList(_prefsFired, _firedAlerts.toList());
+    // Keep the tail bounded — only recent ids can still appear in a 50-row feed.
+    final ids = _alertedIds.toList();
+    final trimmed = ids.length > 200 ? ids.sublist(ids.length - 200) : ids;
+    _alertedIds = trimmed.toSet();
+    await prefs.setStringList(_prefsAlerted, trimmed);
   }
 
   /// Clears device state on logout so the next user starts with a clean baseline.
   Future<void> reset() async {
     stopPolling();
-    _seenStatuses = {};
-    _firedAlerts = {};
-    _notifications.clear();
+    _alertedIds = {};
+    _notifications = [];
     _unreadCount = 0;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_prefsStatuses);
-    await prefs.remove(_prefsFired);
+    await prefs.remove(_prefsAlerted);
     notifyListeners();
   }
 
-  /// Show a local push notification banner and add it to the inbox.
-  Future<void> sendNotification({required String title, required String body}) async {
+  /// Shows an OS notification banner.
+  Future<void> _raiseBanner(String title, String body) async {
     const androidDetails = AndroidNotificationDetails(
       'ammunation_channel',
       'AmmuNation Notifications',
@@ -194,42 +195,11 @@ class NotificationProvider extends ChangeNotifier {
       presentSound: true,
     );
 
-    final id = DateTime.now().millisecondsSinceEpoch.remainder(100000);
-
     await _plugin.show(
-      id,
+      DateTime.now().millisecondsSinceEpoch.remainder(100000),
       title,
       body,
       const NotificationDetails(android: androidDetails, iOS: iosDetails),
     );
-
-    // ponytail: inbox is in-memory only — the alert itself is delivered by the OS.
-    // Persist the list if users start expecting history across restarts.
-    _notifications.insert(
-      0,
-      NotificationModel(
-        id: id.toString(),
-        title: title,
-        body: body,
-        receivedAt: DateTime.now(),
-        isRead: false,
-      ),
-    );
-    _unreadCount++;
-    notifyListeners();
-  }
-
-  void markAllRead() {
-    for (var i = 0; i < _notifications.length; i++) {
-      _notifications[i] = NotificationModel(
-        id: _notifications[i].id,
-        title: _notifications[i].title,
-        body: _notifications[i].body,
-        receivedAt: _notifications[i].receivedAt,
-        isRead: true,
-      );
-    }
-    _unreadCount = 0;
-    notifyListeners();
   }
 }

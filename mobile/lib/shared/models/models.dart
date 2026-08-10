@@ -183,11 +183,33 @@ class NotificationModel {
   final DateTime receivedAt;
   final bool isRead;
 
+  /// Backend `NotificationType` enum value (RESERVATION_APPROVED, UPCOMING_RETURN,
+  /// …). Empty for locally-raised alerts that never came from the feed.
+  final String type;
+
+  /// The record the alert is about — a reservation id, used to deep-link.
+  final String? entityId;
+
   const NotificationModel({
     required this.id,
     required this.title,
     required this.body,
     required this.receivedAt,
     this.isRead = false,
+    this.type = '',
+    this.entityId,
   });
+
+  /// Mirrors a row from `GET /notifications`. `readAt` is null while unread.
+  factory NotificationModel.fromJson(Map<String, dynamic> json) => NotificationModel(
+        id: json['id']?.toString() ?? '',
+        title: json['title']?.toString() ?? '',
+        body: json['body']?.toString() ?? '',
+        receivedAt:
+            DateTime.tryParse(json['createdAt']?.toString() ?? '')?.toLocal() ??
+                DateTime.now(),
+        isRead: json['readAt'] != null,
+        type: json['type']?.toString() ?? '',
+        entityId: json['entityId']?.toString(),
+      );
 }

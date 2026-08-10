@@ -114,4 +114,45 @@ void main() {
       }
     });
   });
+
+  group('NotificationModel', () {
+    // Verbatim row from GET /api/v1/notifications (NotificationsService.findForUser).
+    Map<String, dynamic> row({dynamic readAt}) => {
+          'id': '25994b56-9263-4a6d-9c87-1ff4d825ab3d',
+          'userId': '4a6674b6-b999-45d2-8d44-18c0b23ba441',
+          'type': 'RESERVATION_APPROVED',
+          'title': 'Reservation approved',
+          'body': 'Your reservation #E61D7B3B was approved. Pickup Tue Sep 01 2026.',
+          'entityType': 'Reservation',
+          'entityId': 'e61d7b3b-6852-406c-b614-cbb221918342',
+          'readAt': readAt,
+          'createdAt': '2026-08-10T09:30:00.000Z',
+        };
+
+    test('parses a feed row', () {
+      final n = NotificationModel.fromJson(row());
+      expect(n.id, '25994b56-9263-4a6d-9c87-1ff4d825ab3d');
+      expect(n.type, 'RESERVATION_APPROVED');
+      expect(n.title, 'Reservation approved');
+      expect(n.entityId, 'e61d7b3b-6852-406c-b614-cbb221918342');
+      expect(n.receivedAt.isUtc, isFalse,
+          reason: 'server sends UTC; the inbox shows local time');
+    });
+
+    test('readAt is what makes a row read', () {
+      expect(NotificationModel.fromJson(row()).isRead, isFalse);
+      expect(
+        NotificationModel.fromJson(row(readAt: '2026-08-10T10:00:00.000Z')).isRead,
+        isTrue,
+      );
+    });
+
+    test('a malformed row degrades instead of throwing', () {
+      final n = NotificationModel.fromJson({'id': 'x'});
+      expect(n.id, 'x');
+      expect(n.title, isEmpty);
+      expect(n.isRead, isFalse);
+      expect(n.type, isEmpty);
+    });
+  });
 }

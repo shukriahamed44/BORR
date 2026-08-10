@@ -97,9 +97,12 @@ class NotificationsScreen extends StatelessWidget {
                         padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
                         itemCount: notifications.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, i) => _NotificationTile(
-                          notification: notifications[i],
-                          relativeTime: _relativeTime(notifications[i].receivedAt),
+                        itemBuilder: (_, i) => GestureDetector(
+                          onTap: () => provider.markRead(notifications[i].id),
+                          child: _NotificationTile(
+                            notification: notifications[i],
+                            relativeTime: _relativeTime(notifications[i].receivedAt),
+                          ),
                         )
                             .animate(delay: Duration(milliseconds: i * 50))
                             .fadeIn(duration: 280.ms)
@@ -120,8 +123,24 @@ class _NotificationTile extends StatelessWidget {
 
   const _NotificationTile({required this.notification, required this.relativeTime});
 
-  /// Icon and tint are derived from the alert's subject so the inbox scans quickly.
+  /// Icon and tint come from the backend `NotificationType` where present, and
+  /// fall back to the subject line for locally-raised alerts that carry no type.
   (IconData, Color) get _visual {
+    switch (notification.type) {
+      case 'RESERVATION_APPROVED':
+        return (Icons.check_circle_rounded, AppTheme.accent);
+      case 'RESERVATION_REJECTED':
+        return (Icons.cancel_rounded, AppTheme.danger);
+      case 'RESERVATION_EXPIRED':
+        return (Icons.history_toggle_off_rounded, AppTheme.danger);
+      case 'UPCOMING_RETURN':
+        return (Icons.schedule_rounded, AppTheme.warning);
+      case 'PAYMENT_RECEIVED':
+        return (Icons.payments_rounded, AppTheme.accent);
+      case 'DOCUMENT_VERIFIED':
+        return (Icons.verified_rounded, AppTheme.primary);
+    }
+
     final title = notification.title.toLowerCase();
     if (title.contains('approved')) return (Icons.check_circle_rounded, AppTheme.accent);
     if (title.contains('rejected')) return (Icons.cancel_rounded, AppTheme.danger);
