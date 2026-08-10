@@ -19,8 +19,8 @@ Written after repeatedly hitting the same environment traps — read the "Gotcha
 **API base URL:** `http://localhost:3000/api/v1` — every route is behind the `/api/v1` global prefix (set in `backend/src/main.ts`).
 **Swagger:** `http://localhost:3000/api/docs`
 
-> ⚠️ The **active frontend is `frontend/`** (Vite), not `web/` (Next.js). The BORR landing page,
-> the glass design system (`src/index.css`), and the `AppShell` all live in `frontend/`.
+> ⚠️ The **only frontend is `frontend/`** (Vite). The BORR landing page, the glass design system
+> (`src/index.css`), and the `AppShell` all live there. The old `web/` Next.js scaffold was deleted.
 
 ### Backend module map (`backend/src/`)
 

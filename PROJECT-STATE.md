@@ -32,13 +32,14 @@ Roles: **ADMIN, STAFF, WAREHOUSE_OPERATOR, CUSTOMER**.
 
 ## 2. Critical orientation facts
 
-1. **The active frontend is `frontend/` (Vite + React 19), NOT `web/` (Next.js).**
-   The BORR landing page, the glass design system (`src/index.css`) and the `AppShell` all live in
-   `frontend/`. `web/` is legacy and untouched. Do not build new UI there.
-2. **Backend runs inside WSL; frontend runs on Windows.** Docker (Postgres + Redis) runs in WSL
-   with no Docker Desktop. The WSL VM shuts down when no process is running in it, taking the
-   containers with it — so the backend must be started in the *same* WSL invocation as
-   `docker compose up -d`. Full details and 11 documented traps in `RUNBOOK.md`.
+1. **The only frontend is `frontend/` (Vite + React 19).** The BORR landing page, the glass design
+   system (`src/index.css`) and the `AppShell` all live there. The legacy `web/` Next.js scaffold
+   was deleted on 2026-08-11; it exists in git history only.
+2. **Backend and frontend both run on Windows. Only Docker (Postgres + Redis) runs in WSL.**
+   Running the backend inside WSL as well cost an evening: two servers bound :3000, the WSL one
+   owned Windows loopback, and it never rebuilt because file watching does not work over `/mnt/e`.
+   Start everything with `.\scripts\dev.ps1` and read `MASTER BOOTUP GUIDE.md` before debugging any
+   "my change did nothing" symptom. Environment traps are in `RUNBOOK.md`.
 3. **Prisma CLI hangs when run from WSL over `/mnt/e`.** Run migrations from the **Windows** side.
 4. Every API route is under the **`/api/v1`** prefix.
 5. List endpoints return an **envelope**, not a bare array: `{ count, total, page, limit, totalPages, products }` etc.

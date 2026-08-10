@@ -57,8 +57,6 @@ project AmmuNation/
 │       ├── services/api.ts     ← Fetch client, token refresh, typed endpoints
 │       └── index.css           ← Glass design system & dark theme
 │
-├── web/                      ← ⚠️ Legacy Next.js scaffold — NOT the submitted UI
-│
 ├── mobile/                   ← Flutter Cross-Platform App (Android, iOS, Web)
 │   ├── lib/
 │   │   ├── core/             ← Dio Client, Secure Storage (Keychain/Keystore), Theme
@@ -71,8 +69,8 @@ project AmmuNation/
 └── PROJECT-STATE.md          ← Build status, decisions, known gaps
 ```
 
-> **Which frontend?** The submitted web UI is **`frontend/`** (Vite + React 19).
-> `web/` is an earlier Next.js scaffold retained in history and is not part of the deliverable.
+> **Which frontend?** The submitted web UI is **`frontend/`** (Vite + React 19). An earlier
+> Next.js scaffold, `web/`, was deleted — it survives in git history only.
 
 ---
 
