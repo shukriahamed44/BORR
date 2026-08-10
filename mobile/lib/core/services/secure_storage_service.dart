@@ -21,14 +21,16 @@ class SecureStorageService {
 
   // ─── Write ───────────────────────────────────────────────────────────────
 
+  /// Writes are sequential, never `Future.wait`. On web the vault derives its
+  /// AES key on first write, so parallel writes each generate a key and the last
+  /// one wins — every value written under an earlier key then fails to decrypt,
+  /// which reads as "logged in, but the token vanished".
   static Future<void> saveTokens({
     required String accessToken,
     required String refreshToken,
   }) async {
-    await Future.wait([
-      _storage.write(key: AppConstants.keyAccessToken, value: accessToken),
-      _storage.write(key: AppConstants.keyRefreshToken, value: refreshToken),
-    ]);
+    await _storage.write(key: AppConstants.keyAccessToken, value: accessToken);
+    await _storage.write(key: AppConstants.keyRefreshToken, value: refreshToken);
   }
 
   static Future<void> saveUserMeta({
@@ -36,11 +38,9 @@ class SecureStorageService {
     required String userName,
     required String role,
   }) async {
-    await Future.wait([
-      _storage.write(key: AppConstants.keyUserId, value: userId),
-      _storage.write(key: AppConstants.keyUserName, value: userName),
-      _storage.write(key: AppConstants.keyUserRole, value: role),
-    ]);
+    await _storage.write(key: AppConstants.keyUserId, value: userId);
+    await _storage.write(key: AppConstants.keyUserName, value: userName);
+    await _storage.write(key: AppConstants.keyUserRole, value: role);
   }
 
   // ─── Read ─────────────────────────────────────────────────────────────────
