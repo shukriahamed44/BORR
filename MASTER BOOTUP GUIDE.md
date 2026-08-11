@@ -3,6 +3,12 @@
 Written 2026-08-11 after the equipment-images session. Read this first on a fresh boot.
 It covers: how to start the stack, what runs where, what broke and why, and what not to repeat.
 
+> **Updated 2026-08-11 (later the same day): the data layer moved out of WSL onto Windows.**
+> WSL had no `vEthernet (WSL)` adapter, so Windows could not reach the containers at all and
+> Prisma died with `P1001` about a minute after every boot. Postgres and Redis now run as
+> portable Windows binaries under `E:\Apps\devstack` - no Docker, no service, no admin.
+> See §9. Sections 4.1, 4.3 and 4.4 below are history now, kept for the symptoms they describe.
+
 ---
 
 ## 1. Clean boot sequence
@@ -10,7 +16,7 @@ It covers: how to start the stack, what runs where, what broke and why, and what
 After a Windows restart, three terminals in `E:\Apps\Assessment\project AmmuNation`:
 
 ```powershell
-.\scripts\dev.ps1 data       # 1. boots WSL; Postgres + Redis auto-start there
+.\scripts\dev.ps1 data       # 1. Postgres + Redis on Windows (see scripts/devstack.ps1)
 .\scripts\dev.ps1 backend    # 2. NestJS on :3000, watch mode
 .\scripts\dev.ps1 web        # 3. Vite on :5173
 ```
@@ -48,16 +54,16 @@ depends on it.
 
 | Piece | Host | Port | Started by | Auto-starts? |
 |---|---|---|---|---|
-| Postgres 16 (`ammunation_postgres`) | Docker **inside WSL** | 5432 | `docker`, `restart: always` | yes, once WSL boots |
-| Redis 7 (`ammunation_redis`) | Docker **inside WSL** | 6379 | `docker`, `restart: always` | yes, once WSL boots |
+| Postgres 16.10 (portable) | **Windows** | 5432 | `dev.ps1 data` -> `pg_ctl` | no |
+| Redis 8.10 (portable) | **Windows** | 6379 | `dev.ps1 data` -> `redis-server.exe` | no |
 | NestJS API | **Windows** | 3000 | `npm run start:dev` | no |
 | Vite web app | **Windows** | 5173 | `npm run dev` | no |
 | Flutter app | emulator / device | — | `flutter run` | no |
 
-WSL runs systemd (`/etc/wsl.conf` has `systemd=true`) and the docker unit is `enabled`, so simply
-touching WSL (`wsl -e true`, or `dev.ps1 data`) brings the database and cache back with no sudo.
+Everything is on Windows now. Nothing in this stack touches WSL, and the old
+`ammunation_postgres` / `ammunation_redis` containers are stopped with `restart=no`.
 
-**Rule: run the backend on Windows only.** See §4.1.
+**Rule: one backend, on Windows.** See §4.1.
 
 ---
 
@@ -178,7 +184,8 @@ relay to break, and `dev.ps1`'s IP dance becomes unnecessary.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Backend exits, `P1001` | Windows cannot reach WSL Postgres | reboot Windows; then `dev.ps1 data` before `dev.ps1 backend` |
+| Backend exits, `P1001` | Postgres not started (it does not survive a reboot) | `.\scripts\dev.ps1 data` |
+| `P1001` and `dev.ps1 data` says it is up | stale `DATABASE_URL` pointing at a WSL IP | it must be `127.0.0.1:5432` — see §9 |
 | Code change has no effect | a second backend owns loopback | `.\scripts\dev.ps1 status`; kill the extra; never run it in WSL |
 | Images 404 on web | Vite started before the proxy existed, or backend down | restart `dev.ps1 web`; check `curl 127.0.0.1:3000/equipment/tl-drill-001.jpg` |
 | Images blank in mobile | wrong API host | pass `--dart-define=API_BASE_URL=http://<LAN-IP>:3000/api/v1` |
@@ -207,9 +214,68 @@ Known pre-existing failure, untouched and unrelated:
 
 ```powershell
 cd "E:\Apps\Assessment\project AmmuNation"
+.\scripts\dev.ps1 data       # Postgres + Redis do not survive a reboot; start them
 .\scripts\dev.ps1 status
 ```
 
-If `postgres ... : True` and the two containers are listed, run `dev.ps1 backend` and `dev.ps1 web`
-and you are working. If the DB line still says `False`, WSL networking is still wedged — go to §4.4
-(Windows Update, then mirrored mode) before burning time on anything else.
+All four lines should read `True`. Then `dev.ps1 backend` and `dev.ps1 web`.
+
+---
+
+## 9. The Windows data layer (2026-08-11, replaces the WSL containers)
+
+### Why
+
+`Get-NetAdapter` listed no `vEthernet (WSL)` adapter. WSL2's NAT switch simply was not present on
+the Windows side, so every Windows -> WSL TCP connect timed out while Postgres stayed perfectly
+healthy inside WSL (`pg_isready` ok). `wsl.exe` commands kept working because those ride hvsocket,
+not TCP — which is exactly what makes this look like a project bug instead of a host fault.
+
+`wsl --shutdown` bought about a minute of working TCP, then it died again mid-request. Rebuilding
+the switch needs `Restart-Service hns` or a reboot, both of which need admin, which this account
+does not have. So the data layer moved to Windows and the problem stopped existing.
+
+### What it is
+
+`scripts/devstack.ps1` — `up` / `down` / `status`. On first `up` it downloads two portable ZIPs
+into `E:\Apps\devstack`, runs `initdb`, creates `ammunation_db`, and starts both:
+
+| | Build | Notes |
+|---|---|---|
+| Postgres | EDB **binaries ZIP** 16.10 (not the installer) | cluster in `E:\Apps\devstack\pgdata`, log `postgres.log` |
+| Redis | `redis-windows/redis-windows` 8.10 msys2 ZIP | BullMQ wants 6.2+, so not the old `tporadowski` 5.x |
+
+Nothing is installed and no service is registered — both run as your user. `initdb` uses
+`--auth=trust`: loopback-only dev cluster, so there is no password to keep in `.env`.
+To undo the whole thing, delete `E:\Apps\devstack`.
+
+`dev.ps1 data` just calls `devstack.ps1 up`, so the §1 commands are unchanged.
+
+### Gotcha found on the way
+
+`notifications.module.ts` reads **`REDIS_HOST`/`REDIS_PORT`**, not `REDIS_URL`, and its fallback was
+a hardcoded stale WSL IP (`172.20.75.38`). So BullMQ had been pointing at a dead host regardless of
+what `.env` said. Default is now `127.0.0.1`, and both vars are in `.env` / `.env.example`.
+
+### Rebuilding from empty
+
+```powershell
+cd backend
+npx prisma migrate deploy    # 3 migrations
+npx prisma db seed           # accounts, 7 products, 4 reservations, inventory logs
+```
+
+Seeded logins are `admin@ammunation.com` / `staff@` / `warehouse@` / `customer@`, password
+`Password123!`. Equipment photos are files in `backend/public/equipment/` — a reseed never
+touches them.
+
+### Verified after the move
+
+`api 200`, `img 200 image/jpeg`, Vite proxy `200 image/jpeg`, login 200, `/categories` and
+`/dashboard/stats` 200 with a bearer token, `redis-cli ping` -> `PONG`, and a real BullMQ enqueue
+returning `jobId 1`.
+
+### Still true
+
+The prod path is unchanged — `docker-compose` and the Ansible/nginx deploy still build the same
+containers. This is a dev-local change only.

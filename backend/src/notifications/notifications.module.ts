@@ -18,7 +18,7 @@ import { NotificationsService } from './notifications.service';
   imports: [
     BullModule.forRoot({
       connection: {
-        host: process.env.REDIS_HOST || '172.20.75.38',
+        host: process.env.REDIS_HOST || '127.0.0.1',
         port: parseInt(process.env.REDIS_PORT || '6379', 10),
       },
     }),
